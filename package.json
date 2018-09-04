@@ -1,7 +1,7 @@
 {
   "name": "fliplet-agent",
   "version": "0.0.1",
-  "description": "Command line utility to syncronise data to and from Fliplet Servers.",
+  "description": "Command line utility to synchronize data to and from Fliplet Servers.",
   "main": "fliplet.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
