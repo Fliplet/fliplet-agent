@@ -9,7 +9,7 @@
   "author": "Nicholas Valbusa",
   "license": "ISC",
   "bin": {
-    "fliplet": "./fliplet.js"
+    "fliplet-agent": "./fliplet.js"
   },
   "homepage": "https://www.fliplet.com",
   "repository": "Fliplet/fliplet-agent",
