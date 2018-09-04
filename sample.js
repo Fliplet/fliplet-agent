@@ -6,7 +6,7 @@
 module.exports.config = {
   authToken: 'eu--session--123',
   database: {
-    host: 'localhost',
+    url: 'postgres://postgres@localhost:5432/eu',
     dialect: 'postgres'
   }
 };
