@@ -187,7 +187,7 @@ agent.prototype.run = function runOperations() {
 agent.prototype.push = function pushData(config) {
   config.type = 'push';
   this.operations.push(config);
-  log.info(`Configured push to dataSource ${config.targetDataSource}.`);
+  log.info(`Configured push to dataSource ${config.targetDataSourceId}.`);
   return this;
 }
 
