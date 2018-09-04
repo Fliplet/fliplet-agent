@@ -6,14 +6,18 @@ const API = require('./api');
 const agent = function initAgent(config) {
   log.info('Initialising connection with source database...');
 
-  this.config = _.extend({
+  this.config = config;
+
+  // Extend db settings
+  this.config.database = _.extend({
     operatorsAliases: false,
     logging(query) {
       log.debug(`[QUERY] ${query}`);
     }
-  }, config.database);
+  }, this.config.database);
 
-  this.db = new Sequelize(this.config.url, this.config);
+  // Init connections
+  this.db = new Sequelize(this.config.database.url, this.config.database);
   this.api = new API(this.config.authToken);
 
   return this.db.authenticate()
