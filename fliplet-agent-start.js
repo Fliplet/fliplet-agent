@@ -26,9 +26,10 @@ if (typeof config.setup !== 'function') {
 const Agent = require('./libs/agent');
 
 try {
-  const agent = new Agent(config.config);
-  config.setup(agent);
-  agent.start();
+  (new Agent(config.config)).then(function (agent) {
+    config.setup(agent);
+    agent.start();
+  });
 } catch (e) {
   log.critical(`There was an error running your config file. (Error: ${e.message})`);
 }

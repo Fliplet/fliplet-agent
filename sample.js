@@ -6,8 +6,8 @@
 module.exports.config = {
   authToken: 'eu--session--123',
   database: {
-    driver: 'mssql',
-    url: 'foo://username/bar'
+    host: 'localhost',
+    dialect: 'postgres'
   }
 };
 
