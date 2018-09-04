@@ -2,18 +2,24 @@
   "name": "fliplet-agent",
   "version": "0.0.1",
   "description": "Command line utility to synchronize data to and from Fliplet Servers.",
-  "main": "fliplet.js",
+  "main": "fliplet-agent.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nicholas Valbusa",
   "license": "ISC",
   "bin": {
-    "fliplet-agent": "./fliplet.js"
+    "fliplet-agent": "./fliplet-agent.js"
   },
   "homepage": "https://www.fliplet.com",
   "repository": "Fliplet/fliplet-agent",
   "dependencies": {
-    "commander": "^2.17.1"
+    "chalk": "^2.4.1",
+    "commander": "^2.17.1",
+    "mysql2": "^1.6.1",
+    "pg": "^7.4.3",
+    "pg-hstore": "^2.3.2",
+    "sequelize": "^4.38.0",
+    "tedious": "^2.6.4"
   }
 }
