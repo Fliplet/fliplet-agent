@@ -1,0 +1,19 @@
+{
+  "name": "fliplet-agent",
+  "version": "0.0.1",
+  "description": "Command line utility to syncronise data to and from Fliplet Servers.",
+  "main": "fliplet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nicholas Valbusa",
+  "license": "ISC",
+  "bin": {
+    "fliplet": "./fliplet.js"
+  },
+  "homepage": "https://www.fliplet.com",
+  "repository": "Fliplet/fliplet-agent",
+  "dependencies": {
+    "commander": "^2.17.1"
+  }
+}
