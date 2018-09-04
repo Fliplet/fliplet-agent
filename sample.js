@@ -15,9 +15,10 @@ module.exports.setup = (agent) => {
   // Push data from your table to a Fliplet Data Source
   agent.push({
     description: 'Pushes data from my table to Fliplet',
-    sourceQuery: (db) => db.query('SELECT a, b, c FROM d WHERE e = 1;'),
-    primaryColumnName: 'a',
-    timestampColumnName: 'foo',
-    targetDataSource: 123
+    frequency: '* * * * *',
+    sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
+    primaryColumnName: 'id',
+    timestampColumnName: 'updatedAt',
+    targetDataSourceId: 825
   });
 };

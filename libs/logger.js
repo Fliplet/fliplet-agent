@@ -7,6 +7,10 @@ function getDate() {
   return moment().format('YYYY-MM-DD HH:mm:ss');
 }
 
+logger.error = function (message) {
+  console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
+}
+
 logger.critical = function (message) {
   console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
   process.exit(1);
