@@ -1,5 +1,7 @@
 require('./libs/logger');
 
+log.info('Parsing configuration options');
+
 const configPath = process.argv[2];
 let config;
 
@@ -13,14 +15,20 @@ try {
   log.critical(`Cannot read config file. Please check whether the path is correct. (Error: ${e.message})`);
 }
 
-if (typeof config !== 'function') {
-  log.critical('Your config file does not export a function via module.exports');
+if (typeof config.config !== 'object') {
+  log.critical('Your config file does not export a configuration via module.exports.config');
 }
 
-const agent = require('./libs/agent');
+if (typeof config.setup !== 'function') {
+  log.critical('Your config file does not export a setup function via module.exports.setup');
+}
+
+const Agent = require('./libs/agent');
 
 try {
-  config(agent);
+  const agent = new Agent(config.config);
+  config.setup(agent);
+  agent.start();
 } catch (e) {
   log.critical(`There was an error running your config file. (Error: ${e.message})`);
 }
