@@ -1,8 +1,10 @@
 const _ = require('lodash');
 const Sequelize = require('sequelize');
 
+const API = require('./api');
+
 const agent = function initAgent(config) {
-  log.info('Initialising connection with source database');
+  log.info('Initialising connection with source database...');
 
   this.config = _.extend({
     operatorsAliases: false,
@@ -12,13 +14,25 @@ const agent = function initAgent(config) {
   }, config.database);
 
   this.db = new Sequelize(this.config.url, this.config);
+  this.api = new API(this.config.authToken);
 
-  return this.db.authenticate().then(() => {
-    log.info('Connection has been established successfully.');
-    return this;
-  }).catch(err => {
-    log.critical(`Unable to connect to the database: ${err.message}`);
-  });
+  return this.db.authenticate()
+    .catch(err => {
+      log.critical(`Unable to connect to the database: ${err.message}`);
+    })
+    .then(() => {
+      log.info('Connection has been established successfully.');
+      log.info('Authenticating with Fliplet API...');
+
+      return this.api.authenticate();
+    })
+    .catch(err => {
+      log.critical(`Unable to authenticate with Fliplet API: ${err.message}`);
+    })
+    .then(() => {
+      log.info('Authentication has been verified successfully.');
+      return this;
+    })
 };
 
 agent.prototype.push = function pushData(config) {
