@@ -33,8 +33,8 @@ const agent = function initAgent(config) {
     .catch(err => {
       log.critical(`Unable to authenticate with Fliplet API: ${err.message}`);
     })
-    .then(() => {
-      log.info('Authentication has been verified successfully.');
+    .then((response) => {
+      log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
       return this;
     })
 };
