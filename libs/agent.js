@@ -164,7 +164,7 @@ agent.prototype.run = function runOperations() {
       process.exit();
     }
 
-    log.info('Scheduling operations to run as cronjobs...');
+    log.info('Scheduling operations to run with their set frequency...');
 
     withFrequency.forEach((operation) => {
       new CronJob(
@@ -180,7 +180,7 @@ agent.prototype.run = function runOperations() {
       );
     });
 
-    log.info(`Cronjobs have been scheduled.`);
+    log.info(`Operations have been scheduled. Keep this process alive and you're good to go!`);
   });
 };
 
