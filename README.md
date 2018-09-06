@@ -27,6 +27,8 @@ Running the Fliplet Agent requires you to create a configuration file written in
 Here's a sample configuration file to give you an idea on its structure:
 
 ```js
+// Save this into a file and run using "fliplet-agent start ./path/to/file.js"
+
 module.exports.config = {
   // Fliplet authorisation token from Fliplet Studio
   authToken: 'eu--123456789',
@@ -48,7 +50,9 @@ module.exports.setup = (agent) => {
     // Frequency of running using unix cronjob syntax
     frequency: '* * * * *',
 
-    // The query to run to fetch the data from your database
+    // The query (or operation) to run to fetch the data to be pushed to Fliplet.
+    // You should define a function returning a promise with the data.
+    // In our example, we fetch the data using a SQL query from the local database.
     sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
 
     // Define which column should be used as primary key
@@ -69,7 +73,7 @@ module.exports.setup = (agent) => {
 };
 ```
 
-Once you have a configuration file on your system, starting the agent is as simple as running the following command from your shell:
+Once you have a configuration file like the one above saved on disk, starting the agent is as simple as running the following command from your shell:
 
 ```bash
 fliplet-agent start ./path/to/configurationFile.js
