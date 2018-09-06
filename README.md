@@ -8,7 +8,7 @@ Fliplet Agent is a command line utility to synchronize data to and from Fliplet 
 
 Please install [node.js](http://nodejs.org/) and [npm](http://npmjs.com) to get started. Then, run this simple command to install the agent on your machine:
 
-```
+```bash
 npm install fliplet-agent -g
 ```
 
@@ -53,8 +53,8 @@ module.exports.setup = (agent) => {
 };
 ```
 
-Once you have a configuration file on your system, starting the agent is as simple as running the following command:
+Once you have a configuration file on your system, starting the agent is as simple as running the following command from your shell:
 
-```
-fliplet-agent start ./path/to/configurationFile.js
+```bash
+$ fliplet-agent start ./path/to/configurationFile.js
 ```
