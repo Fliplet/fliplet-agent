@@ -56,5 +56,5 @@ module.exports.setup = (agent) => {
 Once you have a configuration file on your system, starting the agent is as simple as running the following command from your shell:
 
 ```bash
-$ fliplet-agent start ./path/to/configurationFile.js
+fliplet-agent start ./path/to/configurationFile.js
 ```
