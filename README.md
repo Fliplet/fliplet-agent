@@ -39,17 +39,33 @@ module.exports.config = {
 };
 
 module.exports.setup = (agent) => {
+
   // Push data from your table to a Fliplet Data Source
   agent.push({
+    // Description of your operation (will be printed out in the logs)
     description: 'Pushes data from my table to Fliplet',
+
+    // Frequency of running using unix cronjob syntax
     frequency: '* * * * *',
+
+    // The query to run to fetch the data from your database
     sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
+
+    // Define which column should be used as primary key
+    // to understand whether a record already exists on the Fliplet Data Source
     primaryColumnName: 'id',
+
+    // Define which column should be used to compare whether
+    // the record has been updated on your database since it got inserted
+    // to the Fliplet Data Source hence might require updating
     timestampColumnName: 'updatedAt',
+
+    // The ID of the Fliplet Data Source where data should be inserted to
     targetDataSourceId: 123
   });
 
-  // You can define any other operation here
+  // You can define any other operation similar to the above here using "agent.push()"
+
 };
 ```
 
