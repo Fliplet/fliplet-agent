@@ -59,7 +59,7 @@ module.exports.setup = (agent) => {
     // to understand whether a record already exists on the Fliplet Data Source
     primaryColumnName: 'id',
 
-    // Define which column should be used to compare whether
+    // Define which (optional) column should be used to compare whether
     // the record has been updated on your database since it got inserted
     // to the Fliplet Data Source hence might require updating
     timestampColumnName: 'updatedAt',
@@ -107,7 +107,7 @@ agent.push({
   // to understand whether a record already exists on the Fliplet Data Source
   primaryColumnName: 'id',
 
-  // Define which column should be used to compare whether
+  // Define which (optional) column should be used to compare whether
   // the record has been updated on your database since it got inserted
   // to the Fliplet Data Source hence might require updating
   timestampColumnName: 'updatedAt',
