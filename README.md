@@ -78,3 +78,43 @@ Once you have a configuration file like the one above saved on disk, starting th
 ```bash
 fliplet-agent start ./path/to/configurationFile.js
 ```
+
+---
+
+## Pushing data to a Fliplet Data Source
+
+To push data from your local database (or other source) to a Fliplet Data Source, use the `agent.push()` method inside the `setup` of your Javascript file passing a configuration object:
+
+```js
+// Push data from your table to a Fliplet Data Source
+agent.push({
+  // Description of your operation (will be printed out in the logs)
+  description: 'Pushes data from my table to Fliplet',
+
+  // Frequency of running using unix cronjob syntax
+  frequency: '* * * * *',
+
+  // The query (or operation) to run to fetch the data to be pushed to Fliplet.
+  // You should define a function returning a promise with the data.
+  // In our example, we fetch the data using a SQL query from the local database.
+  sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
+
+  // Define which column should be used as primary key
+  // to understand whether a record already exists on the Fliplet Data Source
+  primaryColumnName: 'id',
+
+  // Define which column should be used to compare whether
+  // the record has been updated on your database since it got inserted
+  // to the Fliplet Data Source hence might require updating
+  timestampColumnName: 'updatedAt',
+
+  // The ID of the Fliplet Data Source where data should be inserted to
+  targetDataSourceId: 123
+});
+```
+
+You can define as many push operations as you want inside a single configuration file. **They will be run in series and scheduled for future running according to the frequency set**.
+
+---
+
+In the future, support for pulling data and a two-ways data sync will be made available.
