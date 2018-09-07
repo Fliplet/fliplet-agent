@@ -18,6 +18,59 @@ You can now use the command `fliplet-agent` from the command line. Just type `fl
 
 ## Get started
 
+Create a simple file with with `.yml` extension and the following configuration:
+
+```yml
+# Fliplet API authorisation token taken from Fliplet Studio
+auth_token: eu--123456789
+
+# Database connection settings
+database_driver: postgres
+database_host: localhost
+database_username: postgres
+database_password:
+database_port: 5432
+database_name: eu
+
+# Description of your operation (will be printed out in the logs)
+description: Push my users to Fliplet
+
+# Define a "push" operation for pushing data from your table to a Fliplet Data Source
+type: push
+
+# Frequency of running using unix cronjob syntax
+frequency: '*/15 * * * *'
+
+# The query to run to fetch the data to be pushed to Fliplet
+query: SELECT id, email, "updatedAt" FROM users order by id asc;
+
+# Define which column should be used as primary key
+# to understand whether a record already exists on the Fliplet Data Source
+primary_column: id
+
+# Define which (optional) column should be used to compare whether
+# the record has been updated on your database since it got inserted
+# to the Fliplet Data Source hence might require updating
+timestamp_column: updatedAt
+
+# Define the ID of the target Fliplet Data Source
+datasource_id: 123
+```
+
+Once you have a configuration file like the one above saved on disk, starting the agent is as simple as running the following command from your shell:
+
+```bash
+fliplet-agent start ./path/to/configurationFile.yml
+```
+
+Sample output below:
+
+![sample](https://user-images.githubusercontent.com/574210/45174672-c12aeb80-b20b-11e8-806e-bda5f0e521b0.png)
+
+---
+
+## Get started (for advanced users using JavaScript)
+
 Running the Fliplet Agent requires you to create a configuration file written in JavaScript with the following required details:
 
 1. **Fliplet authToken**: The authorisation token generated via Fliplet Studio.

@@ -1,3 +1,6 @@
+const yaml = require('js-yaml');
+const fs = require('fs');
+
 require('./libs/logger');
 
 log.info('Parsing configuration options');
@@ -10,7 +13,44 @@ if (!configPath) {
 }
 
 try {
-  config = require(configPath);
+  if (/\.js$/.test(configPath)) {
+    log.debug('Parsing Javascript configuration file...');
+
+    // JS configuration file
+    config = require(configPath);
+  } else {
+    log.debug('Parsing YML configuration file...');
+
+    const doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
+
+    config = {
+      config: {
+        authToken: doc.auth_token,
+        database: {
+          dialect: doc.database_driver,
+          host: doc.database_host,
+          username: doc.database_username,
+          password: doc.database_password,
+          port: doc.database_port,
+          database: doc.database_name
+        }
+      },
+      setup(agent) {
+        if (!agent[doc.type]) {
+          log.critical(`Operation ${doc.type} is not supported.`);
+        }
+
+        agent[doc.type]({
+          description: doc.description,
+          frequency: doc.frequency,
+          sourceQuery: (db) => db.query(doc.query),
+          primaryColumnName: doc.primary_column,
+          timestampColumnName: doc.timestamp_column,
+          targetDataSourceId: doc.datasource_id
+        });
+      }
+    };
+  }
 } catch (e) {
   log.critical(`Cannot read config file. Please check whether the path is correct. (Error: ${e.message})`);
 }

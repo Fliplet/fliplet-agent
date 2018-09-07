@@ -23,7 +23,10 @@ const agent = function initAgent(config) {
   }, this.config.database);
 
   // Init connections
-  this.db = new Sequelize(this.config.database.url, this.config.database);
+  this.db = this.config.database.url
+    ? (new Sequelize(this.config.database.url, this.config.database))
+    : (new Sequelize(this.config.database));
+
   this.api = new API(this.config.authToken);
 
   return this.db.authenticate()
@@ -76,6 +79,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     const entries = response.data.entries;
     log.debug(`Fetched ${entries.length} entries from the data source.`);
     log.info('Fetching data from the database...');
+
+    if (typeof operation.sourceQuery !== 'function') {
+      log.critical('Source query is not defined');
+    }
 
     return operation.sourceQuery(this.db).then((result) => {
       const rows = result[0];
@@ -142,6 +149,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       log.critical(`Cannot execute database query: ${err.message}`);
     });
   }).catch((err) => {
+    if (!err.response) {
+      log.critical(err);
+    }
+
     if (err.response.status) {
       log.critical(`You don't have access to the dataSource ${operation.targetDataSourceId}. Please check the permissions of your Fliplet user.`);
     }

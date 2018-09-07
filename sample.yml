@@ -1,0 +1,34 @@
+# Fliplet API authorisation token taken from Fliplet Studio
+auth_token: eu--123456789
+
+# Database connection settings
+database_driver: postgres
+database_host: localhost
+database_username: postgres
+database_password:
+database_port: 5432
+database_name: eu
+
+# Description of your operation (will be printed out in the logs)
+description: Push my users to Fliplet
+
+# Define a "push" operation for pushing data from your table to a Fliplet Data Source
+type: push
+
+# Frequency of running using unix cronjob syntax
+frequency: '*/15 * * * *'
+
+# The query to run to fetch the data to be pushed to Fliplet
+query: SELECT id, email, "updatedAt" FROM users order by id asc;
+
+# Define which column should be used as primary key
+# to understand whether a record already exists on the Fliplet Data Source
+primary_column: id
+
+# Define which (optional) column should be used to compare whether
+# the record has been updated on your database since it got inserted
+# to the Fliplet Data Source hence might require updating
+timestamp_column: updatedAt
+
+# Define the ID of the target Fliplet Data Source
+datasource_id: 123
