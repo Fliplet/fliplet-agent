@@ -136,10 +136,6 @@ Once you have a configuration file like the one above saved on disk, starting th
 fliplet-agent start ./path/to/configurationFile.js
 ```
 
-Sample output below:
-
-![sample](https://user-images.githubusercontent.com/574210/45174672-c12aeb80-b20b-11e8-806e-bda5f0e521b0.png)
-
 ---
 
 In the future, support for pulling data and a two-ways data sync will be made available.
