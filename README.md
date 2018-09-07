@@ -18,7 +18,7 @@ You can now use the command `fliplet-agent` from the command line. Just type `fl
 
 ## Get started
 
-Create a simple file with with `.yml` extension and the following configuration:
+Create a simple file with with `.yml` extension (or grab a [sample copy here](https://raw.githubusercontent.com/Fliplet/fliplet-agent/master/sample.yml)) with the following configuration details and replace with your own settings where appropriate:
 
 ```yml
 # Fliplet API authorisation token taken from Fliplet Studio
@@ -34,9 +34,6 @@ database_name: eu
 
 # Description of your operation (will be printed out in the logs)
 description: Push my users to Fliplet
-
-# Define a "push" operation for pushing data from your table to a Fliplet Data Source
-type: push
 
 # Frequency of running using unix cronjob syntax
 frequency: '*/15 * * * *'
