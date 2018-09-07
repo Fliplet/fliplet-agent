@@ -28,7 +28,7 @@ auth_token: eu--123456789
 database_driver: postgres
 database_host: localhost
 database_username: postgres
-database_password:
+database_password: 123456
 database_port: 5432
 database_name: eu
 
