@@ -16,7 +16,7 @@ description: Push my users to Fliplet
 frequency: '*/15 * * * *'
 
 # The query to run to fetch the data to be pushed to Fliplet
-query: SELECT id, email, "updatedAt" FROM users order by id asc;
+query: SELECT id, email, fullName, updatedAt FROM users;
 
 # Define which column should be used as primary key
 # to understand whether a record already exists on the Fliplet Data Source
