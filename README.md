@@ -69,11 +69,11 @@ Sample output below:
 
 ---
 
-## Get started (for advanced users using JavaScript)
+## Advanced use (requires a JavaScript config file)
 
 **Note: this documentation only applies to users using a JavaScript configuration file instead of the simpler YML (YAML) approach.**
 
-Running the Fliplet Agent in advanced mode requires you to create a configuration file written in JavaScript with the following required details:
+Running the Fliplet Agent in advanced mode requires you to create a configuration file written in JavaScript (instead of YML) with the following required details:
 
 1. **Fliplet authToken**: The authorisation token generated via Fliplet Studio.
 2. **Database connection details**: Username, password, host, port and database name to connect to your database server.
