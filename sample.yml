@@ -12,9 +12,6 @@ database_name: eu
 # Description of your operation (will be printed out in the logs)
 description: Push my users to Fliplet
 
-# Define a "push" operation for pushing data from your table to a Fliplet Data Source
-type: push
-
 # Frequency of running using unix cronjob syntax
 frequency: '*/15 * * * *'
 

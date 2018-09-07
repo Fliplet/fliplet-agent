@@ -36,11 +36,13 @@ try {
         }
       },
       setup(agent) {
-        if (!agent[doc.type]) {
-          log.critical(`Operation ${doc.type} is not supported.`);
+        const operation = doc.type || 'push';
+
+        if (!agent[operation]) {
+          log.critical(`Operation ${operation} is not supported.`);
         }
 
-        agent[doc.type]({
+        agent[operation]({
           description: doc.description,
           frequency: doc.frequency,
           sourceQuery: (db) => db.query(doc.query),
