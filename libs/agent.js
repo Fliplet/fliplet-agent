@@ -68,7 +68,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
   const timestampKey = operation.timestampColumnName;
 
   if (!primaryKey) {
-    log.critical('Pushing data is currently only possible if a primary key is set.');
+    log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
   }
 
   log.info('Fetching data via Fliplet API...');
@@ -92,6 +92,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       const commits = [];
 
       rows.forEach((row) => {
+        if (!primaryKey) {
+          log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
+          return commits.push({
+            data: row
+          });
+        }
+
         const id = row[primaryKey];
 
         if (!id) {

@@ -42,7 +42,10 @@ frequency: '*/15 * * * *'
 query: SELECT id, email, fullName, updatedAt FROM users;
 
 # Define which column should be used as primary key
-# to understand whether a record already exists on the Fliplet Data Source
+# to understand whether a record already exists on the Fliplet Data Source.
+# If you don't define this, every time the script runs rows will be appended
+# to the Fliplet Data Source without running a comparison on whether the row
+# has already been added.
 primary_column: id
 
 # Define which (optional) column should be used to compare whether
