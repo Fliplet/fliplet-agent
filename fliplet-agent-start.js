@@ -32,6 +32,7 @@ try {
           username: doc.database_username,
           password: doc.database_password,
           port: doc.database_port,
+          domain: doc.database_domain,
           database: doc.database_name
         }
       },

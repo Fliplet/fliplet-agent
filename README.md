@@ -30,6 +30,7 @@ database_host: localhost
 database_username: postgres
 database_password: 123456
 database_port: 5432
+database_domain: sample
 database_name: eu
 
 # Description of your operation (will be printed out in the logs)
