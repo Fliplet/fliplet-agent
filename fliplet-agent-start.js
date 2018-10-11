@@ -32,8 +32,12 @@ try {
           username: doc.database_username,
           password: doc.database_password,
           port: doc.database_port,
-          domain: doc.database_domain,
-          database: doc.database_name
+          database: doc.database_name,
+          dialectOptions: {
+            domain: doc.database_domain,
+            instanceName: doc.database_instance,
+            encrypt: doc.database_encrypt
+          }
         }
       },
       setup(agent) {
