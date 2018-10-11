@@ -1,6 +1,6 @@
 {
   "name": "fliplet-agent",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Command line utility to synchronize data to and from Fliplet Servers.",
   "main": "fliplet-agent.js",
   "scripts": {
@@ -16,16 +16,16 @@
   "dependencies": {
     "axios": "^0.18.0",
     "chalk": "^2.4.1",
-    "commander": "^2.17.1",
+    "commander": "^2.19.0",
     "cron": "^1.4.1",
     "js-yaml": "^3.12.0",
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.11",
     "moment": "^2.22.2",
     "mysql2": "^1.6.1",
-    "pg": "^7.4.3",
+    "pg": "^7.5.0",
     "pg-hstore": "^2.3.2",
     "promise-limit": "^2.7.0",
-    "sequelize": "^4.38.0",
-    "tedious": "^2.6.4"
+    "sequelize": "^4.39.0",
+    "tedious": "^2.7.1"
   }
 }
