@@ -6,10 +6,15 @@ require('./libs/logger');
 log.info('Parsing configuration options');
 
 const configPath = process.argv[2];
+const isDryRun = process.argv.indexOf('--test') !== -1;
 let config;
 
 if (!configPath) {
   log.critical('Path to config file is required');
+}
+
+if (isDryRun) {
+  log.info('Dry run enabled. No data will actually be sent to Fliplet server.');
 }
 
 try {
@@ -25,6 +30,7 @@ try {
 
     config = {
       config: {
+        isDryRun: isDryRun,
         authToken: doc.auth_token,
         database: {
           dialect: doc.database_driver,

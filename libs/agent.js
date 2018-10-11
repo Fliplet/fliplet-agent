@@ -142,6 +142,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         return Promise.resolve();
       }
 
+      if (this.config.isDryRun) {
+        log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
+        log.info(JSON.stringify(commits, null, 2));
+        log.debug('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
+        return;
+      }
+
       return this.api.request({
         method: 'POST',
         url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
@@ -174,12 +181,17 @@ agent.prototype.run = function runOperations() {
   Promise.all(this.operations.map((operation) => {
     return series(() => this.runOperation(operation))
   })).then(results => {
-    log.info('Finished to run all operations');
+    log.info('Finished to run all operations.');
 
     const withFrequency = _.filter(this.operations, (o) => !!o.frequency);
 
     if (!withFrequency.length) {
-      process.exit();
+      return process.exit();
+    }
+
+    if (this.config.isDryRun) {
+      log.info('Dry run finished. Aborting process.');
+      return process.exit();
     }
 
     log.info('Scheduling operations to run with their set frequency...');

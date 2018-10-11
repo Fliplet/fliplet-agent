@@ -6,7 +6,9 @@ Fliplet Agent is a command line utility to synchronize data to and from Fliplet 
 
 ## Install
 
-Please install [node.js](http://nodejs.org/) and [npm](http://npmjs.com) to get started. Then, run this simple command to install the agent on your machine:
+Please install [node.js](http://nodejs.org/) and [npm](http://npmjs.com) to get started. On Windows, you can access the Node.js shell from the **Start menu** > **Node.js command prompt**.
+
+Then, run this simple command from the shell to install the Fliplet Agent on your machine:
 
 ```bash
 npm install fliplet-agent -g
@@ -15,6 +17,14 @@ npm install fliplet-agent -g
 You can now use the command `fliplet-agent` from the command line. Just type `fliplet-agent` to see the available options and their example usage.
 
 ---
+
+## Update the agent to the latest version
+
+If you need to update the agent to the latest version available on npm, run the following command from the Node.js shell:
+
+```bash
+npm update -g
+```
 
 ## Get started
 
@@ -32,7 +42,7 @@ database_password: 123456
 database_port: 5432
 database_name: eu
 
-# SQL Server only
+# SQL Server only. Remove if necessary.
 database_domain: sampleDomainName
 database_instance: sampleInstanceName
 database_encrypt: true
@@ -42,6 +52,10 @@ description: Push my users to Fliplet
 
 # Frequency of running using unix cronjob syntax
 frequency: '*/15 * * * *'
+
+# If set to true, the sync will also run when the script starts.
+# Otherwise, it will only run according to the frequency setting above.
+sync_on_init: true
 
 # The query to run to fetch the data to be pushed to Fliplet
 query: SELECT id, email, fullName, updatedAt FROM users;
@@ -71,6 +85,14 @@ fliplet-agent start ./path/to/configurationFile.yml
 Sample output below:
 
 ![sample](https://user-images.githubusercontent.com/574210/45174672-c12aeb80-b20b-11e8-806e-bda5f0e521b0.png)
+
+### Test the integration
+
+To perform a dry run and test the integration without actually committing changes to Fliplet servers, use the `--test` option:
+
+```bash
+fliplet-agent start ./path/to/configurationFile.yml --test
+```
 
 ---
 
