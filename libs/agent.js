@@ -51,6 +51,7 @@ const agent = function initAgent(config) {
       log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
 
       Sentry.configureScope((scope) => {
+        scope.setUser(_.pick(response.data.user, [
           'id', 'email', 'auth_token', 'firstName', 'lastName'
         ]));
       });
