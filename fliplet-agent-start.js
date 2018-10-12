@@ -32,6 +32,7 @@ try {
       config: {
         isDryRun: isDryRun,
         authToken: doc.auth_token,
+        syncOnInit: doc.sync_on_init,
         database: {
           dialect: doc.database_driver,
           host: doc.database_host,
@@ -59,6 +60,7 @@ try {
           sourceQuery: (db) => db.query(doc.query),
           primaryColumnName: doc.primary_column,
           timestampColumnName: doc.timestamp_column,
+          deleteColumnName: doc.delete_column,
           targetDataSourceId: doc.datasource_id
         });
       }

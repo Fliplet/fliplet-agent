@@ -12,7 +12,11 @@ const agent = function initAgent(config) {
   log.info('Initialising connection with source database...');
 
   this.operations = [];
-  this.config = config;
+
+  this.config = _.extend({
+    isDryRun: false,
+    syncOnInit: true
+  }, config);
 
   // Extend db settings
   this.config.database = _.extend({
@@ -46,10 +50,6 @@ const agent = function initAgent(config) {
       log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
       return this;
     });
-};
-
-agent.prototype.schedule = function scheduleOperations() {
-
 };
 
 agent.prototype.runOperation = function runOperation(operation) {
@@ -90,6 +90,11 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       log.debug(`Fetched ${rows.length} rows from the database.`);
 
       const commits = [];
+      const toDelete = [];
+
+      if (operation.deleteColumnName) {
+        log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
+      }
 
       rows.forEach((row) => {
         if (!primaryKey) {
@@ -100,6 +105,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
 
         const id = row[primaryKey];
+        const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
 
         if (!id) {
           log.error(`A row is missing its primary key value from the database. Skipping: ${JSON.stringify(row)}`);
@@ -111,6 +117,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         });
 
         if (!entry) {
+          if (isDeleted) {
+            log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
+          }
+
           log.debug(`Row #${id} has been marked for inserting.`);
           return commits.push({
             data: row
@@ -119,6 +129,11 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
         if (!timestampKey) {
           log.debug(`Row #${id} already exists on Fliplet servers.`);
+        }
+
+        if (isDeleted) {
+          log.debug(`Row #${id} has been marked for deletion.`);
+          return toDelete.push(id);
         }
 
         const sourceTimestamp = row[timestampKey];
@@ -137,7 +152,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         });
       });
 
-      if (!commits.length) {
+      if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
         return Promise.resolve();
       }
@@ -145,6 +160,11 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       if (this.config.isDryRun) {
         log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
         log.info(JSON.stringify(commits, null, 2));
+
+        if (operation.deleteColumnName && toDelete.length) {
+          log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
+        }
+
         log.debug('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
         return;
       }
@@ -154,10 +174,11 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
         data: {
           append: true,
-          entries: commits
+          entries: commits,
+          delete: operation.deleteColumnName ? toDelete : undefined
         }
       }).then((res) => {
-        log.info(`Upload finished. ${res.data.entries.length} data source entries have been affected.`);
+        log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
       });
     }).catch((err) => {
       log.critical(`Cannot execute database query: ${err.message}`);
@@ -176,13 +197,17 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 };
 
 agent.prototype.run = function runOperations() {
-  log.info('Running operations...');
+  const initRun = this.config.syncOnInit
+    ? Promise.all(this.operations.map((operation) => {
+        return series(() => this.runOperation(operation))
+      })).then(() => {
+        if (this.operations.length > 1) {
+          log.info('Finished to run all operations.');
+        }
+      })
+    : Promise.resolve();
 
-  Promise.all(this.operations.map((operation) => {
-    return series(() => this.runOperation(operation))
-  })).then(results => {
-    log.info('Finished to run all operations.');
-
+  initRun.then(() => {
     const withFrequency = _.filter(this.operations, (o) => !!o.frequency);
 
     if (!withFrequency.length) {
@@ -194,7 +219,7 @@ agent.prototype.run = function runOperations() {
       return process.exit();
     }
 
-    log.info('Scheduling operations to run with their set frequency...');
+    log.info(`Scheduling ${this.operations.length} operation(s) to run with their set frequency...`);
 
     withFrequency.forEach((operation) => {
       new CronJob(
@@ -210,7 +235,7 @@ agent.prototype.run = function runOperations() {
       );
     });
 
-    log.info(`Operations have been scheduled. Keep this process alive and you're good to go!`);
+    log.info(`Scheduling complete. Keep this process alive and you're good to go!`);
   });
 };
 

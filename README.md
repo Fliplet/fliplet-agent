@@ -47,10 +47,11 @@ database_domain: sampleDomainName
 database_instance: sampleInstanceName
 database_encrypt: true
 
-# Description of your operation (will be printed out in the logs)
+# Description of your operation (will be printed out in the logs).
 description: Push my users to Fliplet
 
-# Frequency of running using unix cronjob syntax
+# Frequency of running using unix cronjob syntax.
+# This example runs the sync every 15 minutes.
 frequency: '*/15 * * * *'
 
 # If set to true, the sync will also run when the script starts.
@@ -71,6 +72,11 @@ primary_column: id
 # the record has been updated on your database since it got inserted
 # to the Fliplet Data Source hence might require updating
 timestamp_column: updatedAt
+
+# Define which (optional) column should be used to compare whether
+# the record has been flagged as deleted on your database and should
+# be removed from the Fliplet Data Source when the column value is not null.
+delete_column: deletedAt
 
 # Define the ID of the target Fliplet Data Source
 datasource_id: 123
@@ -145,6 +151,11 @@ module.exports.setup = (agent) => {
     // the record has been updated on your database since it got inserted
     // to the Fliplet Data Source hence might require updating
     timestampColumnName: 'updatedAt',
+
+    // Define which (optional) column should be used to compare whether
+    // the record has been flagged as deleted on your database and should
+    // be removed from the Fliplet Data Source
+    deleteColumnName: deletedAt,
 
     // The ID of the Fliplet Data Source where data should be inserted to
     targetDataSourceId: 123
