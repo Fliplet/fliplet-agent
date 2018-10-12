@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const moment = require('moment');
+const Sentry = require('@sentry/node');
 
 const logger = {};
 
@@ -13,7 +14,12 @@ logger.error = function (message) {
 
 logger.critical = function (message) {
   console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
-  process.exit(1);
+  Sentry.captureException(message);
+
+  setTimeout(() => {
+    console.error('A critical error was triggered. Aborting process.');
+    process.exit(1);
+  }, 5000);
 }
 
 logger.info = function (message) {

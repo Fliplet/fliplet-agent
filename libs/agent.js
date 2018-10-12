@@ -2,6 +2,7 @@ const _ = require('lodash');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
 const moment = require('moment');
+const Sentry = require('@sentry/node');
 const CronJob = require('cron').CronJob;
 
 const API = require('./api');
@@ -48,6 +49,12 @@ const agent = function initAgent(config) {
     })
     .then((response) => {
       log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
+
+      Sentry.configureScope((scope) => {
+          'id', 'email', 'auth_token', 'firstName', 'lastName'
+        ]));
+      });
+
       return this;
     });
 };

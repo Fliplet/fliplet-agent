@@ -1,3 +1,9 @@
+const Sentry = require('@sentry/node');
+
+Sentry.init({
+  dsn: 'https://c0313d0ea82c4b1cbd4fd5a4e8b624b4@sentry.io/1299915'
+});
+
 const yaml = require('js-yaml');
 const fs = require('fs');
 
@@ -16,6 +22,14 @@ if (!configPath) {
 if (isDryRun) {
   log.info('Dry run enabled. No data will actually be sent to Fliplet server.');
 }
+
+Sentry.configureScope(scope => {
+  scope.setTag('version', require('./package').version);
+});
+
+Sentry.addBreadcrumb({
+  configPath
+});
 
 try {
   if (/\.js$/.test(configPath)) {
