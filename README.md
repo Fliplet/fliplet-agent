@@ -2,6 +2,8 @@
 
 **Fliplet Agent (Data integration service)** is a command line utility to synchronize data to and from Fliplet Servers.
 
+Note: this documentation is also available on our developers website at [https://developers.fliplet.com/Data-integration-service.html](https://developers.fliplet.com/Data-integration-service.html)
+
 ---
 
 ## Install
