@@ -49,6 +49,7 @@ try {
         syncOnInit: doc.sync_on_init,
         database: {
           dialect: doc.database_driver,
+          dialectModulePath: doc.database_native_odbc ? 'sequelize-odbc-mssql' : undefined,
           host: doc.database_host,
           username: doc.database_username,
           password: doc.database_password,
