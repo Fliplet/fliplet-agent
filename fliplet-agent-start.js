@@ -85,7 +85,7 @@ try {
   log.critical(`Cannot read config file. Please check whether the path is correct. (Error: ${e.message})`);
 }
 
-if (typeof config.config !== 'object') {
+if (!config || typeof config.config !== 'object') {
   log.critical('Your config file does not export a configuration via module.exports.config');
 }
 

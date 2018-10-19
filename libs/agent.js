@@ -193,11 +193,11 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     });
   }).catch((err) => {
     if (!err.response) {
-      log.critical(err);
+      return log.critical(err);
     }
 
     if (err.response.status) {
-      log.critical(`You don't have access to the dataSource ${operation.targetDataSourceId}. Please check the permissions of your Fliplet user.`);
+      return log.critical(`You don't have access to the dataSource ${operation.targetDataSourceId}. Please check the permissions of your Fliplet user.`);
     }
 
     return Promise.reject(err);
