@@ -15,11 +15,8 @@ logger.error = function (message) {
 logger.critical = function (message) {
   console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
   Sentry.captureException(message);
-
-  setTimeout(() => {
-    console.error('A critical error was triggered. Aborting process.');
-    process.exit(1);
-  }, 5000);
+  console.error('A critical error was triggered. Aborting process.');
+  process.exit(1);
 }
 
 logger.info = function (message) {
