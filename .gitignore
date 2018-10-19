@@ -1,3 +1,10 @@
+# Libraries
 node_modules/
+
+# IDE/OS
 .DS_Store
 .idea
+
+# Test files
+test.yml
+test.js
