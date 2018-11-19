@@ -16,6 +16,7 @@ const svc = new Service({
   name: 'Fliplet Agent',
   description,
   script: require('path').join(__dirname, 'fliplet-agent-start.js'),
+  workingdirectory: require('path').join(__dirname, 'fliplet-agent-start.js'),
   env: [
     {
       name: 'CFGPATH',
@@ -32,9 +33,12 @@ const svc = new Service({
   ]
 });
 
+svc.on('error', console.error);
+
 // Listen for the "install" event, which indicates the
 // process is available as a service.
 svc.on('install',function(){
+  console.log('The agent has been installed successfully. You can see the logs in the Event Viewer under "Windows Logs" > "Application" for the source "flipletagent.exe"');
   svc.start();
 });
 

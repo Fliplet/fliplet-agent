@@ -8,10 +8,13 @@ const svc = new Service({
   script: require('path').join(__dirname, 'fliplet-agent-start.js')
 });
 
+svc.on('error', console.error);
+
 // Listen for the "uninstall" event so we know when it's done.
 svc.on('uninstall', function (){
   console.info('Uninstall complete.');
   console.info('The service exists: ', svc.exists);
+  process.exit();
 });
 
 // Uninstall the service.

@@ -12,7 +12,7 @@ require('./logger');
 
 log.info('Parsing configuration options');
 
-let configPath = process.argv[2];
+let configPath = process.env.CFGPATH || process.argv[2];
 const isDryRun = process.argv.indexOf('--test') !== -1;
 let config;
 
