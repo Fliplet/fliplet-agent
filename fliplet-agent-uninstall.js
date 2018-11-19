@@ -18,3 +18,5 @@ svc.on('uninstall', function (){
 
 // Uninstall the service.
 svc.uninstall();
+
+process.stdin.resume();
