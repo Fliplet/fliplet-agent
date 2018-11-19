@@ -13,7 +13,6 @@ svc.on('error', console.error);
 // Listen for the "uninstall" event so we know when it's done.
 svc.on('uninstall', function (){
   console.info('Uninstall complete.');
-  console.info('The service exists: ', svc.exists);
   process.exit();
 });
 
