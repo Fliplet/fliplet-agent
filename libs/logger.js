@@ -39,10 +39,9 @@ logger.critical = function (message) {
     eventLogger.error(message);
   } else {
     console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
-    console.error('A critical error was triggered. Aborting process.');
   }
 
-  process.exit(1);
+  throw new Error('A critical error was triggered. Aborting process.');
 }
 
 logger.info = function (message) {

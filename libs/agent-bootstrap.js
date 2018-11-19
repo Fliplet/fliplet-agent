@@ -34,24 +34,26 @@ Sentry.addBreadcrumb({
 
 try {
   if (/\.js$/.test(configPath)) {
-    log.debug('Parsing Javascript configuration file...');
+    log.debug(`Parsing Javascript configuration file at ${configPath}`);
 
     // JS configuration file
     try {
       config = require(configPath);
     } catch (e) {
       configPath = path.join(process.cwd(), configPath);
+      log.debug(`Parsing Javascript configuration file at ${configPath}`);
       config = require(configPath);
       config.path = configPath;
     }
   } else {
-    log.debug('Parsing YML configuration file...');
+    log.debug(`Parsing YML configuration file at ${configPath}`);
     let doc;
 
     try {
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     } catch (e) {
       configPath = path.join(process.cwd(), configPath);
+      log.debug(`Retrying parsing YML configuration file at ${configPath}`);
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     }
 
