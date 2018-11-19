@@ -43,5 +43,3 @@ svc.on('install',function(){
 });
 
 svc.install();
-
-process.stdin.resume();
