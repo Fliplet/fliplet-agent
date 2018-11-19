@@ -22,6 +22,8 @@ if (isService) {
 }
 
 logger.error = function (message) {
+  message = message.toString();
+
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
@@ -32,6 +34,7 @@ logger.error = function (message) {
 }
 
 logger.critical = function (message) {
+  message = message.toString();
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
   Sentry.captureException(message);
 
@@ -45,6 +48,7 @@ logger.critical = function (message) {
 }
 
 logger.info = function (message) {
+  message = message.toString();
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
@@ -55,6 +59,7 @@ logger.info = function (message) {
 }
 
 logger.debug = function (message) {
+  message = message.toString();
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
