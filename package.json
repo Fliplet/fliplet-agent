@@ -1,6 +1,6 @@
 {
   "name": "fliplet-agent",
-  "version": "1.0.13",
+  "version": "1.1.0",
   "description": "Fliplet Agent (Data integration Service) - Command line utility to synchronize local data to Fliplet Servers.",
   "main": "fliplet-agent.js",
   "scripts": {
@@ -23,6 +23,7 @@
     "lodash": "^4.17.11",
     "moment": "^2.22.2",
     "mysql2": "^1.6.1",
+    "node-windows": "^0.1.14",
     "pg": "^7.5.0",
     "pg-hstore": "^2.3.2",
     "promise-limit": "^2.7.0",
