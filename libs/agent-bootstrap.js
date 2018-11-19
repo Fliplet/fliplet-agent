@@ -40,7 +40,7 @@ try {
     try {
       config = require(configPath);
     } catch (e) {
-      configPath = path.join(process.cwd(), process.argv[2]);
+      configPath = path.join(process.cwd(), configPath);
       config = require(configPath);
       config.path = configPath;
     }
@@ -51,7 +51,7 @@ try {
     try {
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     } catch (e) {
-      configPath = path.join(process.cwd(), process.argv[2]);
+      configPath = path.join(process.cwd(), configPath);
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     }
 
