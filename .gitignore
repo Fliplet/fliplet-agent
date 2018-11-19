@@ -11,6 +11,3 @@ test.js
 
 # Windows Service
 daemon/
-
-# Logs
-debug.log

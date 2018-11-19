@@ -3,7 +3,9 @@ const moment = require('moment');
 const fs = require('fs');
 const util = require('util');
 const Sentry = require('@sentry/node');
-const logFile = fs.createWriteStream(__dirname + '/debug.log', {flags : 'w'});
+const path = require('path');
+const homeDirectory = require('os').homedir();
+const logFile = fs.createWriteStream(path.join(homeDirectory, 'fliplet-agent.log'), { flags : 'w' });
 
 const isService = process.env.SERVICE;
 const logger = {};
@@ -20,7 +22,7 @@ if (isService) {
 }
 
 logger.error = function (message) {
-  logFile.write(util.format(message) + '\n');
+  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.error(message);
@@ -30,7 +32,7 @@ logger.error = function (message) {
 }
 
 logger.critical = function (message) {
-  logFile.write(util.format(message) + '\n');
+  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
   Sentry.captureException(message);
 
   if (isService) {
@@ -44,7 +46,7 @@ logger.critical = function (message) {
 }
 
 logger.info = function (message) {
-  logFile.write(util.format(message) + '\n');
+  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.info(message);
@@ -54,7 +56,7 @@ logger.info = function (message) {
 }
 
 logger.debug = function (message) {
-  logFile.write(util.format(message) + '\n');
+  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.info(message);
