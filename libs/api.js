@@ -1,6 +1,9 @@
 const _ = require('lodash');
 const axios = require('axios');
 
+const version = require('../package').version;
+const userAgent = `Fliplet Agent/${version}`;
+
 const regions = {
   eu: 'https://api.fliplet.com',
   us: 'https://us.api.fliplet.com'
@@ -15,10 +18,12 @@ const API = function (authToken) {
   this.authToken = authToken;
   this.baseURL = regions[this.region] || regions.eu;
 
+  log.info(`[API] User Agent for outgoing HTTP requests has been set to ${userAgent}`);
   log.debug(`[API] Regional URL has been set to ${this.baseURL}`);
 
   axios.defaults.baseURL = this.baseURL;
   axios.defaults.headers.common['Auth-token'] = this.authToken;
+  axios.defaults.headers.common['User-Agent'] = userAgent;
   axios.defaults.timeout = 60000;
 };
 
