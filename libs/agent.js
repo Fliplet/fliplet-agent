@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const axios = require('axios');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
 const moment = require('moment');
@@ -19,22 +20,26 @@ const agent = function initAgent(config) {
     syncOnInit: true
   }, config);
 
-  // Extend db settings
-  this.config.database = _.extend({
-    operatorsAliases: false,
-    logging(query) {
-      log.debug(`[QUERY] ${query}`);
-    }
-  }, this.config.database);
+  if (typeof this.config.database === 'object' && Object.keys(this.config.database).length) {
+    // Extend db settings
+    this.config.database = _.extend({
+      operatorsAliases: false,
+      logging(query) {
+        log.debug(`[QUERY] ${query}`);
+      }
+    }, this.config.database);
 
-  // Init connections
-  this.db = this.config.database.url
-    ? (new Sequelize(this.config.database.url, this.config.database))
-    : (new Sequelize(this.config.database));
+    // Init connections
+    this.db = this.config.database.url
+      ? (new Sequelize(this.config.database.url, this.config.database))
+      : (new Sequelize(this.config.database));
+  }
 
   this.api = new API(this.config.authToken);
 
-  return this.db.authenticate()
+  const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
+
+  return authenticate
     .catch(err => {
       log.critical(`Unable to connect to the database: ${err.message}`);
     })
@@ -84,18 +89,39 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
   return this.api.request({
     url: `v1/data-sources/${operation.targetDataSourceId}/data`
   }).then((response) => {
+    let fetchData;
     const entries = response.data.entries;
     log.debug(`Fetched ${entries.length} entries from the data source.`);
-    log.info('Fetching data from the database...');
 
-    if (typeof operation.sourceQuery !== 'function') {
-      log.critical('Source query is not defined');
+    if (typeof operation.sourceQuery === 'function') {
+      log.info('Fetching data from the database...');
+      fetchData = operation.sourceQuery(this.db);
+    } else if (typeof operation.source === 'function') {
+      log.info('Fetching data from manual source...');
+      fetchData = operation.source(axios);
+    } else {
+      log.critical('Source query or operation is not defined');
     }
 
-    return operation.sourceQuery(this.db).then((result) => {
-      const rows = result[0];
+    return fetchData.then((result) => {
+      let rows;
 
-      log.debug(`Fetched ${rows.length} rows from the database.`);
+      if (this.db) {
+        rows = result[0];
+        log.debug(`Fetched ${rows.length} rows from the database.`);
+      } else {
+        if (result.data) {
+          result = result.data;
+        }
+
+        if (Array.isArray(result)) {
+          rows = result;
+          log.debug(`Fetched ${rows.length} rows from manual source.`);
+        } else {
+          rows = [];
+          log.error(`Response from source did not return an array of entries.`);
+        }
+      }
 
       const commits = [];
       const toDelete = [];

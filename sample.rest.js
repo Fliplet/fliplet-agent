@@ -12,33 +12,15 @@ module.exports.config = {
 
   // If set to true, operations will run when the script starts.
   // Otherwise, they will just run according to their frequency.
-  syncOnInit: true,
-
-  // Database connection settings (using Sequelize format)
-  // http://docs.sequelizejs.com/
-  database: {
-    dialect: 'mssql',
-    host: 'localhost',
-    username: 'foo',
-    password: 'bar',
-    port: 1234,
-    database: 'myDatabaseName',
-
-    // MSSQL Server only
-    dialectOptions: {
-      domain: 'myDomain',
-      instanceName: 'myInstanceName',
-      encrypt: false
-    }
-  }
+  syncOnInit: true
 };
 
 module.exports.setup = (agent) => {
-  // Push data from your table to a Fliplet Data Source
+  // Push data from your API to a Fliplet Data Source
   agent.push({
     description: 'Pushes data from my table to Fliplet',
     frequency: '* * * * *',
-    sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
+    source: (rest) => rest.get('https://jsonplaceholder.typicode.com/todos'),
     primaryColumnName: 'id',
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123
