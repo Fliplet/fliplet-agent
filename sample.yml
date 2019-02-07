@@ -4,7 +4,9 @@ auth_token: eu--123456789
 
 # Define the ID of the target Fliplet Data Source where data will be pushed to.
 # This ID can be retrieved from the "Manage app data" section of Fliplet Studio
-# under the settings tab
+# under the settings tab. Don't forget to give access to this data source to your token.
+# More documentation is available at:
+# https://developers.fliplet.com/REST-API/fliplet-datasources.html#access-roles
 datasource_id: 123
 
 # Database connection settings below
@@ -65,4 +67,5 @@ timestamp_column: updatedAt
 # Define which (optional) column should be used to compare whether
 # the record has been flagged as deleted on your database and should
 # be removed from the Fliplet Data Source when the column value is not null.
-delete_column: deletedAt
+# Uncomment the following line to enable the feature.
+# delete_column: deletedAt
