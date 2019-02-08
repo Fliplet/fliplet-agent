@@ -106,6 +106,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     return fetchData.then((result) => {
       let rows;
 
+      log.debug('Successfully fetched data from the source.');
+
       if (this.db) {
         rows = result[0];
         log.debug(`Fetched ${rows.length} rows from the database.`);
@@ -162,12 +164,12 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
 
         if (!timestampKey) {
-          log.debug(`Row #${id} already exists on Fliplet servers.`);
+          log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id}.`);
         }
 
         if (isDeleted) {
-          log.debug(`Row #${id} has been marked for deletion.`);
-          return toDelete.push(id);
+          log.debug(`Row #${id} has been marked for deletion on Fliplet servers with ID ${entry.id}.`);
+          return toDelete.push(entry.id);
         }
 
         const sourceTimestamp = row[timestampKey];
@@ -213,6 +215,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
       }).then((res) => {
         log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+      }).catch((err) => {
+        log.critical(`Cannot sync data to Fliplet servers: ${err.message}`);
       });
     }).catch((err) => {
       log.critical(`Cannot execute database query: ${err.message}`);
