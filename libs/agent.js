@@ -155,6 +155,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         if (!entry) {
           if (isDeleted) {
             log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
+            return;
           }
 
           log.debug(`Row #${id} has been marked for inserting.`);
@@ -178,7 +179,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
 
         if (!diff) {
-          return log.debug(`Row #${id} already exists on Fliplet servers and does not require updating.`);
+          return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
         }
 
         log.debug(`Row #${id} has been marked for updating.`);
