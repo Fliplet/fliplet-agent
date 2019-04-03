@@ -8,4 +8,6 @@ node_modules/
 # Test files
 test.yml
 test.js
-daemon
+
+# Windows Service
+daemon/
