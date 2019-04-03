@@ -13,7 +13,7 @@ program
     const firstCommand = command[0];
 
     if (!this.commands.find(c => c._name == firstCommand)) {
-      console.error('Invalid command: %s\nSee --help for a list of available commands.', program.args.join(' '));
+      console.error('Invalid command: %s\n', program.args.join(' '));
       this.help();
       process.exit(1);
     }
