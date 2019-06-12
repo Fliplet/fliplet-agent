@@ -30,7 +30,7 @@ module.exports.setup = (agent) => {
   agent.pull({
     description: 'Pull data from a Fliplet data source to my database',
     frequency: '* * * * *',
-    targetDataSourceId: 37793,
+    targetDataSourceId: 456,
     where: {
       'Foo': 'Bar'
     },
