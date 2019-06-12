@@ -25,4 +25,17 @@ module.exports.setup = (agent) => {
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123
   });
+
+  // Pull data from a Fliplet Data Source
+  agent.pull({
+    description: 'Pull data from a Fliplet data source to my database',
+    frequency: '* * * * *',
+    targetDataSourceId: 37793,
+    where: {
+      'Foo': 'Bar'
+    },
+    action: (entries, db) => {
+      console.log(entries)
+    },
+  });
 };
