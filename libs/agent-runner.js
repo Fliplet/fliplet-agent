@@ -71,6 +71,8 @@ agent.prototype.runOperation = function runOperation(operation) {
   switch (operation.type) {
     case 'push':
       return this.runPushOperation(operation);
+    case 'pull':
+      return this.runPullOperation(operation);
     default:
       log.critical(`Operation "${operation.type}" does not exist. We only support "push" operations for the time being.`);
   }
@@ -84,7 +86,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
   }
 
-  log.info('Fetching data via Fliplet API...');
+  log.info('[PUSH] Fetching data via Fliplet API...');
 
   return this.api.request({
     url: `v1/data-sources/${operation.targetDataSourceId}/data`
@@ -235,6 +237,41 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
   });
 };
 
+agent.prototype.runPullOperation = function runPullOperation(operation) {
+  log.info('[PULL] Fetching data via Fliplet API...');
+
+  return this.api.request({
+    url: `v1/data-sources/${operation.targetDataSourceId}/data/query`,
+    method: 'POST',
+    data: _.pick(operation, [
+      'where', 'attributes', 'join', 'distinct'
+    ])
+  }).then((response) => {
+    const entries = response.data.entries;
+    log.debug(`Fetched ${entries.length} entries from the data source.`);
+
+    let action = operation.action(entries, this.db);
+
+    if (!(action instanceof Promise)) {
+      action = Promise.resolve();
+    }
+
+    return action.then(function () {
+      log.info(`Sync finished.`);
+    });
+  }).catch((err) => {
+    if (!err.response) {
+      return log.critical(err);
+    }
+
+    if (err.response.status) {
+      return log.critical(`You don't have access to the dataSource ${operation.targetDataSourceId}. Please check the permissions of your Fliplet user.`);
+    }
+
+    return Promise.reject(err);
+  });
+};
+
 agent.prototype.run = function runOperations() {
   const initRun = this.config.syncOnInit
     ? Promise.all(this.operations.map((operation) => {
@@ -283,7 +320,14 @@ agent.prototype.push = function pushData(config) {
   this.operations.push(config);
   log.info(`Configured push to dataSource ${config.targetDataSourceId}.`);
   return this;
-}
+};
+
+agent.prototype.pull = function pullData(config) {
+  config.type = 'pull';
+  this.operations.push(config);
+  log.info(`Configured pull from dataSource ${config.targetDataSourceId}.`);
+  return this;
+};
 
 agent.prototype.start = function startAgent() {
   log.info('Agent started successfully. Press Ctrl+C to quit.');
@@ -291,6 +335,6 @@ agent.prototype.start = function startAgent() {
   process.stdin.resume();
   return this.run();
   return this;
-}
+};
 
 module.exports = agent;
