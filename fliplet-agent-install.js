@@ -1,3 +1,4 @@
+const path = require('path');
 const Service = require('node-windows').Service;
 
 const { Agent, config } = require('./libs/agent-bootstrap');
@@ -9,11 +10,12 @@ if (!operations.length) {
   console.error('No operations have been defined.');
 }
 
+const fileName = path.basename(config.path).split('.')[0];
 const description = operations[0].description;
 
 // Create a new service object
 const svc = new Service({
-  name: 'Fliplet Agent',
+  name: `Fliplet Agent (${fileName})`,
   description,
   script: require('path').join(__dirname, 'fliplet-agent-start.js'),
   workingdirectory: require('path').join(__dirname, 'fliplet-agent-start.js'),
