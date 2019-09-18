@@ -41,6 +41,7 @@ module.exports.setup = (agent) => {
     sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
     primaryColumnName: 'id',
     timestampColumnName: 'updatedAt',
-    targetDataSourceId: 123
+    targetDataSourceId: 123,
+    runHooks: []
   });
 };

@@ -134,6 +134,12 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
       }
 
+      if (operation.runHooks && operation.runHooks.length) {
+        log.debug(`Post-sync hooks enabled: ${operation.runHooks.join(', ')}`);
+      } else {
+        log.debug(`No post-sync hooks have been enabled`);
+      }
+
       rows.forEach((row) => {
         if (!primaryKey) {
           log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
@@ -214,7 +220,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         data: {
           append: true,
           entries: commits,
-          delete: operation.deleteColumnName ? toDelete : undefined
+          delete: operation.deleteColumnName ? toDelete : undefined,
+          runHooks: operation.runHooks || []
         }
       }).then((res) => {
         log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);

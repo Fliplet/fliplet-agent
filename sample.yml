@@ -69,3 +69,9 @@ timestamp_column: updatedAt
 # be removed from the Fliplet Data Source when the column value is not null.
 # Uncomment the following line to enable the feature.
 # delete_column: deletedAt
+
+# Define which (optional) post-sync hooks should run on the data source data when received
+# by Fliplet servers. Hook types are "insert" and "update"
+run_hooks:
+#  - "insert"
+#  - "update"
