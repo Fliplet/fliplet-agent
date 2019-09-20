@@ -1,10 +1,14 @@
 const _ = require('lodash');
+const fs = require('fs');
+const path = require('path');
+const util = require('util');
 const axios = require('axios');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
 const moment = require('moment');
 const Sentry = require('@sentry/node');
 const CronJob = require('cron').CronJob;
+const readFile = util.promisify(fs.readFile);
 
 const API = require('./api');
 
@@ -147,7 +151,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       await Promise.all(rows.map(async (row) => {
         if (operation.files.length) {
           await Promise.all(operation.files.map(function (definition) {
-            const url = row[definition.column];
+            let url = row[definition.column];
 
             if (!url) {
               return;
@@ -159,6 +163,14 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
               case 'remote':
                 log.debug(`[FILES] Requesting remote file: ${url}`);
                 operation = axios.get(url);
+                break;
+              case 'local':
+                if (definition.directory) {
+                  url = path.join(definition.directory, url);
+                }
+
+                log.debug(`[FILES] Requesting local file: ${url}`);
+                operation = readFile(url);
                 break;
             }
 
