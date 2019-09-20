@@ -88,6 +88,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
   log.info('[PUSH] Fetching data via Fliplet API...');
 
+  if (operation.files && operation.files.length) {
+    log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
+  }
+
   return this.api.request({
     url: `v1/data-sources/${operation.targetDataSourceId}/data`
   }).then((response) => {
@@ -105,7 +109,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       log.critical('Source query or operation is not defined');
     }
 
-    return fetchData.then((result) => {
+    return fetchData.then(async (result) => {
       let rows;
 
       log.debug('Successfully fetched data from the source.');
@@ -140,7 +144,30 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`No post-sync hooks have been enabled`);
       }
 
-      rows.forEach((row) => {
+      await Promise.all(rows.map(async (row) => {
+        if (operation.files.length) {
+          await Promise.all(operation.files.map(function (definition) {
+            const url = row[definition.column];
+
+            if (!url) {
+              return;
+            }
+
+            let operation;
+
+            switch (definition.type) {
+              case 'remote':
+                log.debug(`[FILES] Requesting remote file: ${url}`);
+                operation = axios.get(url);
+                break;
+            }
+
+            return operation.catch((err) => {
+              log.error(`[FILES] Cannot fetch file: ${url}`);
+            });
+          }));
+        }
+
         if (!primaryKey) {
           log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
           return commits.push({
@@ -195,7 +222,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
           id: entry.id,
           data: row
         });
-      });
+      }));
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
