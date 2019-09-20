@@ -11,6 +11,7 @@ const CronJob = require('cron').CronJob;
 const readFile = util.promisify(fs.readFile);
 
 const API = require('./api');
+const Files = require('./files');
 
 const series = promiseLimit(1);
 
@@ -176,6 +177,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
             return operation.catch((err) => {
               log.error(`[FILES] Cannot fetch file: ${url}`);
+            }).then(function (file) {
+              const checksum = Files.checksum(file);
             });
           }));
         }
