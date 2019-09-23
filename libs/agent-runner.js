@@ -157,69 +157,76 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       }
 
       await Promise.all(rows.map(async (row) => {
-        if (operation.files.length) {
-          await Promise.all(operation.files.map(function (definition) {
-            let fileUrl = row[definition.column];
+        async function syncFiles(entryId) {
+          if (operation.files.length) {
+            await Promise.all(operation.files.map(function (definition) {
+              let fileUrl = row[definition.column];
 
-            if (!fileUrl) {
-              return;
-            }
+              if (!fileUrl) {
+                return;
+              }
 
-            let operation;
+              let operation;
 
-            switch (definition.type) {
-              case 'remote':
-                log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
-                operation = axios.request({
-                  url: fileUrl,
-                  responseType: 'arraybuffer'
-                }).then((response) => {
-                  const parsedUrl = url.parse(fileUrl);
-                  const contentType = response.headers['content-type'];
-                  const extension = mime.getExtension(contentType);
+              switch (definition.type) {
+                case 'remote':
+                  log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                  operation = axios.request({
+                    url: fileUrl,
+                    responseType: 'arraybuffer'
+                  }).then((response) => {
+                    const parsedUrl = url.parse(fileUrl);
+                    const contentType = response.headers['content-type'];
+                    const extension = mime.getExtension(contentType);
 
-                  return {
-                    body: response.data,
-                    name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
-                  };
-                });
-                break;
-              case 'local':
-                if (definition.directory) {
-                  fileUrl = path.join(definition.directory, fileUrl);
+                    return {
+                      body: response.data,
+                      name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                    };
+                  });
+                  break;
+                case 'local':
+                  if (definition.directory) {
+                    fileUrl = path.join(definition.directory, fileUrl);
+                  }
+
+                  log.debug(`[FILES] Requesting local file: ${fileUrl}`);
+                  operation = readFile(fileUrl).then((response) => {
+                    return {
+                      body: response,
+                      name: path.basename(fileUrl)
+                    };
+                  });
+                  break;
+              }
+
+              return operation.catch((err) => {
+                log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
+              }).then(function uploadFile(file) {
+                if (entryId) {
+                  file.name = `${entryId}-${file.name}`;
                 }
-
-                log.debug(`[FILES] Requesting local file: ${fileUrl}`);
-                operation = readFile(fileUrl).then((response) => {
-                  return {
-                    body: response,
-                    name: path.basename(fileUrl)
-                  };
+                return agent.files.upload({
+                  url: fileUrl,
+                  operation,
+                  row,
+                  file
+                }).then(function (file) {
+                  row[definition.column] = file.url;
+                  row[`${definition.column}MediaFileId`] = file.id;
                 });
-                break;
-            }
-
-            return operation.catch((err) => {
-              log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
-            }).then(function uploadFile(file) {
-              return agent.files.upload({
-                url: fileUrl,
-                operation,
-                row,
-                file
-              }).then(function (file) {
-                row[definition.column] = file.url;
-                row[`${definition.column}MediaFileId`] = file.id;
+              }).catch(function onFileUploadError(err) {
+                log.error(`Cannot upload file: ${err}`);
+                return Promise.resolve();
               });
-            }).catch(function onFileUploadError(err) {
-              log.error(`Cannot upload file: ${err}`);
-              return Promise.resolve();
-            });
-          }));
+            }));
+          }
         }
 
         if (!primaryKey) {
           log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
+
+          await syncFiles();
           return commits.push({
             data: row
           });
@@ -244,6 +251,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
           }
 
           log.debug(`Row #${id} has been marked for inserting.`);
+
+          await syncFiles(id);
           return commits.push({
             data: row
           });
@@ -268,6 +277,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
 
         log.debug(`Row #${id} has been marked for updating.`);
+
+        await syncFiles(id);
         return commits.push({
           id: entry.id,
           data: row
