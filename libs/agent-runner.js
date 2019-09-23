@@ -1,11 +1,13 @@
 const _ = require('lodash');
 const fs = require('fs');
+const url = require('url');
 const path = require('path');
 const util = require('util');
 const axios = require('axios');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
 const moment = require('moment');
+const mime = require('mime');
 const Sentry = require('@sentry/node');
 const CronJob = require('cron').CronJob;
 const readFile = util.promisify(fs.readFile);
@@ -41,6 +43,7 @@ const agent = function initAgent(config) {
   }
 
   this.api = new API(this.config.authToken);
+  this.files = new Files(this.api);
 
   const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
 
@@ -84,8 +87,12 @@ agent.prototype.runOperation = function runOperation(operation) {
 };
 
 agent.prototype.runPushOperation = function runPushOperation(operation) {
+  const agent = this;
   const primaryKey = operation.primaryColumnName;
   const timestampKey = operation.timestampColumnName;
+
+  // Cleanup
+  agent.files.resetState();
 
   if (!primaryKey) {
     log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
@@ -152,9 +159,9 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       await Promise.all(rows.map(async (row) => {
         if (operation.files.length) {
           await Promise.all(operation.files.map(function (definition) {
-            let url = row[definition.column];
+            let fileUrl = row[definition.column];
 
-            if (!url) {
+            if (!fileUrl) {
               return;
             }
 
@@ -162,23 +169,51 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
             switch (definition.type) {
               case 'remote':
-                log.debug(`[FILES] Requesting remote file: ${url}`);
-                operation = axios.get(url);
+                log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                operation = axios.request({
+                  url: fileUrl,
+                  responseType: 'arraybuffer'
+                }).then((response) => {
+                  const parsedUrl = url.parse(fileUrl);
+                  const contentType = response.headers['content-type'];
+                  const extension = mime.getExtension(contentType);
+
+                  return {
+                    body: response.data,
+                    name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                  };
+                });
                 break;
               case 'local':
                 if (definition.directory) {
-                  url = path.join(definition.directory, url);
+                  fileUrl = path.join(definition.directory, fileUrl);
                 }
 
-                log.debug(`[FILES] Requesting local file: ${url}`);
-                operation = readFile(url);
+                log.debug(`[FILES] Requesting local file: ${fileUrl}`);
+                operation = readFile(fileUrl).then((response) => {
+                  return {
+                    body: response,
+                    name: path.basename(fileUrl)
+                  };
+                });
                 break;
             }
 
             return operation.catch((err) => {
-              log.error(`[FILES] Cannot fetch file: ${url}`);
-            }).then(function (file) {
-              const checksum = Files.checksum(file);
+              log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
+            }).then(function uploadFile(file) {
+              return agent.files.upload({
+                url: fileUrl,
+                operation,
+                row,
+                file
+              }).then(function (file) {
+                row[definition.column] = file.url;
+                row[`${definition.column}MediaFileId`] = file.id;
+              });
+            }).catch(function onFileUploadError(err) {
+              log.error(`Cannot upload file: ${err}`);
+              return Promise.resolve();
             });
           }));
         }
@@ -271,7 +306,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.critical(`Cannot sync data to Fliplet servers: ${err.message}`);
       });
     }).catch((err) => {
-      log.critical(`Cannot execute database query: ${err.message}`);
+      log.critical(err);
     });
   }).catch((err) => {
     if (!err.response) {
