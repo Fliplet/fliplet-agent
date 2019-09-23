@@ -1,12 +1,19 @@
 const _ = require('lodash');
+const fs = require('fs');
+const url = require('url');
+const path = require('path');
+const util = require('util');
 const axios = require('axios');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
 const moment = require('moment');
+const mime = require('mime');
 const Sentry = require('@sentry/node');
 const CronJob = require('cron').CronJob;
+const readFile = util.promisify(fs.readFile);
 
 const API = require('./api');
+const Files = require('./files');
 
 const series = promiseLimit(1);
 
@@ -36,6 +43,7 @@ const agent = function initAgent(config) {
   }
 
   this.api = new API(this.config.authToken);
+  this.files = new Files(this.api);
 
   const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
 
@@ -79,14 +87,22 @@ agent.prototype.runOperation = function runOperation(operation) {
 };
 
 agent.prototype.runPushOperation = function runPushOperation(operation) {
+  const agent = this;
   const primaryKey = operation.primaryColumnName;
   const timestampKey = operation.timestampColumnName;
+
+  // Cleanup
+  agent.files.resetState();
 
   if (!primaryKey) {
     log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
   }
 
   log.info('[PUSH] Fetching data via Fliplet API...');
+
+  if (operation.files && operation.files.length) {
+    log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
+  }
 
   return this.api.request({
     url: `v1/data-sources/${operation.targetDataSourceId}/data`
@@ -105,7 +121,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       log.critical('Source query or operation is not defined');
     }
 
-    return fetchData.then((result) => {
+    return fetchData.then(async (result) => {
       let rows;
 
       log.debug('Successfully fetched data from the source.');
@@ -140,9 +156,77 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`No post-sync hooks have been enabled`);
       }
 
-      rows.forEach((row) => {
+      await Promise.all(rows.map(async (row) => {
+        async function syncFiles(entryId) {
+          if (operation.files.length) {
+            await Promise.all(operation.files.map(function (definition) {
+              let fileUrl = row[definition.column];
+
+              if (!fileUrl) {
+                return;
+              }
+
+              let operation;
+
+              switch (definition.type) {
+                case 'remote':
+                  log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                  operation = axios.request({
+                    url: fileUrl,
+                    responseType: 'arraybuffer'
+                  }).then((response) => {
+                    const parsedUrl = url.parse(fileUrl);
+                    const contentType = response.headers['content-type'];
+                    const extension = mime.getExtension(contentType);
+
+                    return {
+                      body: response.data,
+                      name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                    };
+                  });
+                  break;
+                case 'local':
+                  if (definition.directory) {
+                    fileUrl = path.join(definition.directory, fileUrl);
+                  }
+
+                  log.debug(`[FILES] Requesting local file: ${fileUrl}`);
+                  operation = readFile(fileUrl).then((response) => {
+                    return {
+                      body: response,
+                      name: path.basename(fileUrl)
+                    };
+                  });
+                  break;
+              }
+
+              return operation.catch((err) => {
+                log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
+              }).then(function uploadFile(file) {
+                if (entryId) {
+                  file.name = `${entryId}-${file.name}`;
+                }
+                return agent.files.upload({
+                  url: fileUrl,
+                  operation,
+                  row,
+                  file
+                }).then(function (file) {
+                  row[definition.column] = file.url;
+                  row[`${definition.column}MediaFileId`] = file.id;
+                });
+              }).catch(function onFileUploadError(err) {
+                log.error(`Cannot upload file: ${err}`);
+                return Promise.resolve();
+              });
+            }));
+          }
+        }
+
         if (!primaryKey) {
           log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
+
+          await syncFiles();
           return commits.push({
             data: row
           });
@@ -167,6 +251,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
           }
 
           log.debug(`Row #${id} has been marked for inserting.`);
+
+          await syncFiles(id);
           return commits.push({
             data: row
           });
@@ -191,11 +277,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
 
         log.debug(`Row #${id} has been marked for updating.`);
+
+        await syncFiles(id);
         return commits.push({
           id: entry.id,
           data: row
         });
-      });
+      }));
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
@@ -229,7 +317,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.critical(`Cannot sync data to Fliplet servers: ${err.message}`);
       });
     }).catch((err) => {
-      log.critical(`Cannot execute database query: ${err.message}`);
+      log.critical(err);
     });
   }).catch((err) => {
     if (!err.response) {

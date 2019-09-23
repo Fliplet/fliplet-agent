@@ -1,7 +1,7 @@
 const Sentry = require('@sentry/node');
 
 Sentry.init({
-  dsn: 'https://c0313d0ea82c4b1cbd4fd5a4e8b624b4@sentry.io/1299915'
+  dsn: process.env.TEST ? '' : 'https://c0313d0ea82c4b1cbd4fd5a4e8b624b4@sentry.io/1299915'
 });
 
 const path = require('path');
@@ -93,7 +93,8 @@ try {
           timestampColumnName: doc.timestamp_column,
           deleteColumnName: doc.delete_column,
           runHooks: doc.run_hooks,
-          targetDataSourceId: doc.datasource_id
+          targetDataSourceId: doc.datasource_id,
+          files: doc.files
         });
       }
     };
