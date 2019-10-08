@@ -300,7 +300,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         });
       }
 
-      toDelete = _.compact(_.uniq(entry.id));
+      toDelete = _.compact(_.uniq(toDelete));
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
