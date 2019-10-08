@@ -104,6 +104,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
   }
 
+  if (operation.deleteMissing) {
+    log.info(`Remote entries not found in the local dataset will be deleted ("deleteMissing" option is enabled).`);
+  }
+
   return this.api.request({
     url: `v1/data-sources/${operation.targetDataSourceId}/data`
   }).then((response) => {
@@ -144,7 +148,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       }
 
       const commits = [];
-      const toDelete = [];
+      let toDelete = [];
 
       if (operation.deleteColumnName) {
         log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
@@ -277,6 +281,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
 
         log.debug(`Row #${id} has been marked for updating.`);
+        entry.found = true;
 
         await syncFiles(id);
         return commits.push({
@@ -284,6 +289,18 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
           data: row
         });
       }));
+
+
+      if (operation.deleteMissing && entries.length) {
+        entries.forEach((entry) => {
+          if (!entry.found) {
+            log.debug(`Remote entry with ID ${entry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
+            toDelete.push(entry.id);
+          }
+        });
+      }
+
+      toDelete = _.compact(_.uniq(entry.id));
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
@@ -294,7 +311,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
         log.info(JSON.stringify(commits, null, 2));
 
-        if (operation.deleteColumnName && toDelete.length) {
+        if (toDelete.length) {
           log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
         }
 
@@ -308,7 +325,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         data: {
           append: true,
           entries: commits,
-          delete: operation.deleteColumnName ? toDelete : undefined,
+          delete: toDelete && toDelete.length ? toDelete : undefined,
           runHooks: operation.runHooks || []
         }
       }).then((res) => {

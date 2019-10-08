@@ -92,6 +92,7 @@ try {
           primaryColumnName: doc.primary_column,
           timestampColumnName: doc.timestamp_column,
           deleteColumnName: doc.delete_column,
+          deleteMissing: doc.delete_missing,
           runHooks: doc.run_hooks,
           targetDataSourceId: doc.datasource_id,
           files: doc.files
