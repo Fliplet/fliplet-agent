@@ -104,8 +104,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
     log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
   }
 
-  if (operation.deleteMissing) {
-    log.info(`Remote entries not found in the local dataset will be deleted ("deleteMissing" option is enabled).`);
+  if (operation.mode === 'replace') {
+    log.info(`Remote entries not found in the local dataset will be deleted ("mode" is set to "replace").`);
+  } else {
+    log.info(`Remote entries not found in the local dataset will be kept ("mode" is set to "update").`);
   }
 
   return this.api.request({
@@ -276,7 +278,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
         const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
 
-        if (!diff && !operation.deleteMissing) {
+        if (!diff && operation.mode !== 'replace') {
           return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
         }
 
@@ -291,7 +293,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       }));
 
 
-      if (operation.deleteMissing && entries.length) {
+      if (operation.mode === 'replace' && entries.length) {
         entries.forEach((entry) => {
           if (!entry.found) {
             log.debug(`Remote entry with ID ${entry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
