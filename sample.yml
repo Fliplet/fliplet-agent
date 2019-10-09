@@ -64,6 +64,11 @@ primary_column: id
 # to the Fliplet Data Source hence might require updating
 timestamp_column: updatedAt
 
+# Define whether remote entries on Fliplet servers should be kept or deleted when
+# they are not found in the local dataset returned by the query result.
+# Using "update" will keep orphaned entries while "replace" will delete them.
+mode: update
+
 # Define which (optional) column should be used to compare whether
 # the record has been flagged as deleted on your database and should
 # be removed from the Fliplet Data Source when the column value is not null.

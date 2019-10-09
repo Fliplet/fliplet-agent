@@ -100,8 +100,14 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
   log.info('[PUSH] Fetching data via Fliplet API...');
 
-  if (operation.files && operation.files.length) {
+  if (Array.isArray(operation.files) && operation.files.length) {
     log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
+  }
+
+  if (operation.mode === 'replace') {
+    log.info(`Remote entries not found in the local dataset will be deleted ("mode" is set to "replace").`);
+  } else {
+    log.info(`Remote entries not found in the local dataset will be kept ("mode" is set to "update").`);
   }
 
   return this.api.request({
@@ -144,13 +150,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
       }
 
       const commits = [];
-      const toDelete = [];
+      let toDelete = [];
 
       if (operation.deleteColumnName) {
         log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
       }
 
-      if (operation.runHooks && operation.runHooks.length) {
+      if (Array.isArray(operation.runHooks) && operation.runHooks.length) {
         log.debug(`Post-sync hooks enabled: ${operation.runHooks.join(', ')}`);
       } else {
         log.debug(`No post-sync hooks have been enabled`);
@@ -158,7 +164,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
       await Promise.all(rows.map(async (row) => {
         async function syncFiles(entryId) {
-          if (operation.files.length) {
+          if (Array.isArray(operation.files) && operation.files.length) {
             await Promise.all(operation.files.map(function (definition) {
               let fileUrl = row[definition.column];
 
@@ -272,11 +278,12 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
         const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
 
-        if (!diff) {
+        if (!diff && operation.mode !== 'replace') {
           return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
         }
 
         log.debug(`Row #${id} has been marked for updating.`);
+        entry.found = true;
 
         await syncFiles(id);
         return commits.push({
@@ -284,6 +291,18 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
           data: row
         });
       }));
+
+
+      if (operation.mode === 'replace' && entries.length) {
+        entries.forEach((entry) => {
+          if (!entry.found) {
+            log.debug(`Remote entry with ID ${entry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
+            toDelete.push(entry.id);
+          }
+        });
+      }
+
+      toDelete = _.compact(_.uniq(toDelete));
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
@@ -294,7 +313,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
         log.info(JSON.stringify(commits, null, 2));
 
-        if (operation.deleteColumnName && toDelete.length) {
+        if (toDelete.length) {
           log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
         }
 
@@ -308,7 +327,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         data: {
           append: true,
           entries: commits,
-          delete: operation.deleteColumnName ? toDelete : undefined,
+          delete: toDelete && toDelete.length ? toDelete : undefined,
           runHooks: operation.runHooks || []
         }
       }).then((res) => {
