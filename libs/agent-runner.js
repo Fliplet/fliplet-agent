@@ -276,7 +276,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
         const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
 
-        if (!diff) {
+        if (!diff && !operation.deleteMissing) {
           return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
         }
 
