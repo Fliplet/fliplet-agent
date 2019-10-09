@@ -100,7 +100,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
   log.info('[PUSH] Fetching data via Fliplet API...');
 
-  if (operation.files && operation.files.length) {
+  if (Array.isArray(operation.files) && operation.files.length) {
     log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
   }
 
@@ -154,7 +154,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
       }
 
-      if (operation.runHooks && operation.runHooks.length) {
+      if (Array.isArray(operation.runHooks) && operation.runHooks.length) {
         log.debug(`Post-sync hooks enabled: ${operation.runHooks.join(', ')}`);
       } else {
         log.debug(`No post-sync hooks have been enabled`);
@@ -162,7 +162,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
       await Promise.all(rows.map(async (row) => {
         async function syncFiles(entryId) {
-          if (operation.files.length) {
+          if (Array.isArray(operation.files) && operation.files.length) {
             await Promise.all(operation.files.map(function (definition) {
               let fileUrl = row[definition.column];
 
