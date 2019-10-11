@@ -9,6 +9,7 @@ const promiseLimit = require('promise-limit');
 const moment = require('moment');
 const mime = require('mime');
 const Sentry = require('@sentry/node');
+const sprequest = require('sp-request');
 const CronJob = require('cron').CronJob;
 const readFile = util.promisify(fs.readFile);
 
@@ -204,14 +205,28 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
                     };
                   });
                   break;
+                case 'sharepoint':
+                  const credentialOptions = { username: definition.username, password: definition.password };
+                  const spr = sprequest.create(credentialOptions);
+
+                  operation = spr.get(fileUrl).then(function (response) {
+                    return response.body;
+                  });
+                  break;
               }
 
               return operation.catch((err) => {
-                log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
+                log.error(`[FILES] Cannot fetch file: ${fileUrl} - Error: ${err}`);
               }).then(function uploadFile(file) {
+                if (!file) {
+                  row[definition.column] = '';
+                  return;
+                }
+
                 if (entryId) {
                   file.name = `${entryId}-${file.name}`;
                 }
+
                 return agent.files.upload({
                   url: fileUrl,
                   operation,
