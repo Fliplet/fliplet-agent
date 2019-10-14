@@ -180,7 +180,8 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
                   log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
                   operation = axios.request({
                     url: fileUrl,
-                    responseType: 'arraybuffer'
+                    responseType: 'arraybuffer',
+                    headers: definition.headers
                   }).then((response) => {
                     const parsedUrl = url.parse(fileUrl);
                     const contentType = response.headers['content-type'];
