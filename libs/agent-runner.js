@@ -210,7 +210,9 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
                   const credentialOptions = { username: definition.username, password: definition.password };
                   const spr = sprequest.create(credentialOptions);
 
-                  operation = spr.get(fileUrl).then(function (response) {
+                  operation = spr.get(fileUrl, {
+                    encoding: null
+                  }).then(function (response) {
                     return response.body;
                   });
                   break;
