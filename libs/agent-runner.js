@@ -213,13 +213,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
                   operation = spr.get(fileUrl, {
                     encoding: null
                   }).then(function (response) {
-                    return response.body;
+                    return { body: response.body.toString(), name: 'file.jpg' };
                   });
                   break;
               }
 
               return operation.catch((err) => {
-                log.error(`[FILES] Cannot fetch file: ${fileUrl} - Error: ${err}`);
+                log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
               }).then(function uploadFile(file) {
                 if (!file) {
                   row[definition.column] = '';
