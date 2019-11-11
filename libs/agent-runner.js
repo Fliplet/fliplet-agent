@@ -216,7 +216,7 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
                     operation = spr.get(fileUrl, {
                       encoding: null
                     }).then(function (response) {
-                      return { body: response.body.toString(), name: 'file.jpg' };
+                      return { body: response.body, name: 'file.jpg' };
                     });
                     break;
                 }
