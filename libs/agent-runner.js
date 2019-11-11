@@ -163,150 +163,154 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`No post-sync hooks have been enabled`);
       }
 
-      await Promise.all(rows.map(async (row) => {
-        async function syncFiles(entryId) {
-          if (Array.isArray(operation.files) && operation.files.length) {
-            await Promise.all(operation.files.map(function (definition) {
-              let fileUrl = row[definition.column];
+      const limit = promiseLimit(1);
 
-              if (!fileUrl) {
-                return;
-              }
+      await Promise.all(rows.map((row) => {
+        return limit(async function () {
+          async function syncFiles(entryId) {
+            if (Array.isArray(operation.files) && operation.files.length) {
+              await Promise.all(operation.files.map(function (definition) {
+                let fileUrl = row[definition.column];
 
-              let operation;
-
-              switch (definition.type) {
-                case 'remote':
-                  log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
-                  operation = axios.request({
-                    url: fileUrl,
-                    responseType: 'arraybuffer',
-                    headers: definition.headers
-                  }).then((response) => {
-                    const parsedUrl = url.parse(fileUrl);
-                    const contentType = response.headers['content-type'];
-                    const extension = mime.getExtension(contentType);
-
-                    return {
-                      body: response.data,
-                      name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
-                    };
-                  });
-                  break;
-                case 'local':
-                  if (definition.directory) {
-                    fileUrl = path.join(definition.directory, fileUrl);
-                  }
-
-                  log.debug(`[FILES] Requesting local file: ${fileUrl}`);
-                  operation = readFile(fileUrl).then((response) => {
-                    return {
-                      body: response,
-                      name: path.basename(fileUrl)
-                    };
-                  });
-                  break;
-                case 'sharepoint':
-                  const credentialOptions = { username: definition.username, password: definition.password };
-                  const spr = sprequest.create(credentialOptions);
-
-                  operation = spr.get(fileUrl, {
-                    encoding: null
-                  }).then(function (response) {
-                    return { body: response.body.toString(), name: 'file.jpg' };
-                  });
-                  break;
-              }
-
-              return operation.catch((err) => {
-                log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
-              }).then(function uploadFile(file) {
-                if (!file) {
-                  row[definition.column] = '';
+                if (!fileUrl) {
                   return;
                 }
 
-                if (entryId) {
-                  file.name = `${entryId}-${file.name}`;
+                let operation;
+
+                switch (definition.type) {
+                  case 'remote':
+                    log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                    operation = axios.request({
+                      url: fileUrl,
+                      responseType: 'arraybuffer',
+                      headers: definition.headers
+                    }).then((response) => {
+                      const parsedUrl = url.parse(fileUrl);
+                      const contentType = response.headers['content-type'];
+                      const extension = mime.getExtension(contentType);
+
+                      return {
+                        body: response.data,
+                        name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                      };
+                    });
+                    break;
+                  case 'local':
+                    if (definition.directory) {
+                      fileUrl = path.join(definition.directory, fileUrl);
+                    }
+
+                    log.debug(`[FILES] Requesting local file: ${fileUrl}`);
+                    operation = readFile(fileUrl).then((response) => {
+                      return {
+                        body: response,
+                        name: path.basename(fileUrl)
+                      };
+                    });
+                    break;
+                  case 'sharepoint':
+                    const credentialOptions = { username: definition.username, password: definition.password };
+                    const spr = sprequest.create(credentialOptions);
+
+                    operation = spr.get(fileUrl, {
+                      encoding: null
+                    }).then(function (response) {
+                      return { body: response.body.toString(), name: 'file.jpg' };
+                    });
+                    break;
                 }
 
-                return agent.files.upload({
-                  url: fileUrl,
-                  operation,
-                  row,
-                  file
-                }).then(function (file) {
-                  row[definition.column] = file.url;
-                  row[`${definition.column}MediaFileId`] = file.id;
+                return operation.catch((err) => {
+                  log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
+                }).then(function uploadFile(file) {
+                  if (!file) {
+                    row[definition.column] = '';
+                    return;
+                  }
+
+                  if (entryId) {
+                    file.name = `${entryId}-${file.name}`;
+                  }
+
+                  return agent.files.upload({
+                    url: fileUrl,
+                    operation,
+                    row,
+                    file
+                  }).then(function (file) {
+                    row[definition.column] = file.url;
+                    row[`${definition.column}MediaFileId`] = file.id;
+                  });
+                }).catch(function onFileUploadError(err) {
+                  log.error(`Cannot upload file: ${err}`);
+                  return Promise.resolve();
                 });
-              }).catch(function onFileUploadError(err) {
-                log.error(`Cannot upload file: ${err}`);
-                return Promise.resolve();
-              });
-            }));
+              }));
+            }
           }
-        }
 
-        if (!primaryKey) {
-          log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
+          if (!primaryKey) {
+            log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
 
-          await syncFiles();
-          return commits.push({
-            data: row
+            await syncFiles();
+            return commits.push({
+              data: row
+            });
+          }
+
+          const id = row[primaryKey];
+          const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
+
+          if (!id) {
+            log.error(`A row is missing its primary key value from the database. Skipping: ${JSON.stringify(row)}`);
+            return Promise.resolve();
+          }
+
+          const entry = _.find(entries, (e) => {
+            return e.data[primaryKey] === id;
           });
-        }
 
-        const id = row[primaryKey];
-        const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
+          if (!entry) {
+            if (isDeleted) {
+              log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
+              return;
+            }
 
-        if (!id) {
-          log.error(`A row is missing its primary key value from the database. Skipping: ${JSON.stringify(row)}`);
-          return Promise.resolve();
-        }
+            log.debug(`Row #${id} has been marked for inserting.`);
 
-        const entry = _.find(entries, (e) => {
-          return e.data[primaryKey] === id;
-        });
-
-        if (!entry) {
-          if (isDeleted) {
-            log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
-            return;
+            await syncFiles(id);
+            return commits.push({
+              data: row
+            });
           }
 
-          log.debug(`Row #${id} has been marked for inserting.`);
+          if (!timestampKey) {
+            log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id}.`);
+          }
+
+          if (isDeleted) {
+            log.debug(`Row #${id} has been marked for deletion on Fliplet servers with ID ${entry.id}.`);
+            return toDelete.push(entry.id);
+          }
+
+          const sourceTimestamp = row[timestampKey];
+          const targetTimestamp = entry.data[timestampKey];
+
+          const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
+
+          if (!diff && operation.mode !== 'replace') {
+            return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
+          }
+
+          log.debug(`Row #${id} has been marked for updating.`);
+          entry.found = true;
 
           await syncFiles(id);
           return commits.push({
+            id: entry.id,
             data: row
           });
-        }
-
-        if (!timestampKey) {
-          log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id}.`);
-        }
-
-        if (isDeleted) {
-          log.debug(`Row #${id} has been marked for deletion on Fliplet servers with ID ${entry.id}.`);
-          return toDelete.push(entry.id);
-        }
-
-        const sourceTimestamp = row[timestampKey];
-        const targetTimestamp = entry.data[timestampKey];
-
-        const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
-
-        if (!diff && operation.mode !== 'replace') {
-          return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
-        }
-
-        log.debug(`Row #${id} has been marked for updating.`);
-        entry.found = true;
-
-        await syncFiles(id);
-        return commits.push({
-          id: entry.id,
-          data: row
         });
       }));
 
