@@ -328,6 +328,13 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
       if (!commits.length && !toDelete.length) {
         log.info('Nothing to commit.');
+
+        if (typeof operation.onSync === 'function') {
+          operation.onSync({
+            commits: []
+          });
+        }
+
         return Promise.resolve();
       }
 
@@ -354,6 +361,12 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         }
       }).then((res) => {
         log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+
+        if (typeof operation.onSync === 'function') {
+          operation.onSync({
+            commits
+          });
+        }
       }).catch((err) => {
         log.critical(`Cannot sync data to Fliplet servers: ${err.message}`);
       });
