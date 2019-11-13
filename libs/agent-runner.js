@@ -163,7 +163,10 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
         log.debug(`No post-sync hooks have been enabled`);
       }
 
-      const limit = promiseLimit(1);
+      const concurrency = parseInt(operation.concurrency || 1, 10);
+      const limit = promiseLimit(concurrency);
+
+      log.debug(`Concurrency has been set to ${concurrency}.`);
 
       await Promise.all(rows.map((row) => {
         return limit(async function () {

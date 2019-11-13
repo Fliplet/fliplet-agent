@@ -95,7 +95,8 @@ try {
           mode: doc.mode || 'update',
           runHooks: doc.run_hooks,
           targetDataSourceId: doc.datasource_id,
-          files: doc.files
+          files: doc.files,
+          concurrency: doc.concurrency
         });
       }
     };
