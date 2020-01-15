@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// Allow self-signed certificates
+process.env.NODE_NO_WARNINGS = 1;
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const path = require('path');
 const package = require(path.join(__dirname, 'package.json'));
 const program = require('commander');
