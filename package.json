@@ -1,6 +1,6 @@
 {
   "name": "fliplet-agent",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Fliplet Agent (Data integration service) is a command line utility to synchronize data to and from Fliplet Servers.",
   "main": "fliplet-agent.js",
   "scripts": {
@@ -14,7 +14,7 @@
   "homepage": "https://developers.fliplet.com/Data-integration-service.html",
   "repository": "Fliplet/fliplet-agent",
   "dependencies": {
-    "@sentry/node": "^4.1.1",
+    "@sentry/node": "^5.12.3",
     "axios": "^0.18.0",
     "chalk": "^2.4.1",
     "commander": "^2.20.3",
