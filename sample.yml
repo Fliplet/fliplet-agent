@@ -98,3 +98,9 @@ files:
 #  - column: thumbnail
 #    type: local
 #    directory: /Users/John/Desktop
+
+# Define what columns should be encrypted to encrypt
+# encrypt:
+#  fields:
+#    - First Name
+#    - Last Name
