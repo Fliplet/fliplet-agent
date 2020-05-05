@@ -168,7 +168,6 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
         // Create new key
         const key = Crypt.generateKey();
-        console.log('>>', key)
         const encryptedKey = Crypt.salt(keySalt).encrypt(key);
 
         log.info('[ENCRYPTION] Uploading key to Fliplet APIs...');
