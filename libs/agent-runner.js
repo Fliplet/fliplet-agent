@@ -15,6 +15,7 @@ const readFile = util.promisify(fs.readFile);
 
 const API = require('./api');
 const Files = require('./files');
+const Crypt = require('./crypt');
 
 const series = promiseLimit(1);
 
@@ -87,16 +88,103 @@ agent.prototype.runOperation = function runOperation(operation) {
   }
 };
 
-agent.prototype.runPushOperation = function runPushOperation(operation) {
+agent.prototype.runPushOperation = async function runPushOperation(operation) {
   const agent = this;
   const primaryKey = operation.primaryColumnName;
   const timestampKey = operation.timestampColumnName;
+  let encryptionKey;
 
   // Cleanup
   agent.files.resetState();
 
   if (!primaryKey) {
     log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
+  }
+
+  if (operation.encrypt) {
+    if (!_.get(operation, 'encrypt.fields', []).length) {
+      log.critical('[ENCRYPTION] You need to define a list of fields to encrypt.');
+    }
+
+    log.info(`[ENCRYPTION] Encryption is enabled for the following fields: ${operation.encrypt.fields.join(', ')}`);
+
+    if (operation.encrypt.key) {
+      log.debug('[ENCRYPTION] A key has been defined by the operation.');
+      encryptionKey = operation.encrypt.key;
+    } else {
+      log.debug('[ENCRYPTION] A key has not been defined. Fetching the key from Fliplet servers...');
+
+      const keySalt = operation.encrypt.salt || `dataSource-${operation.targetDataSourceId}`;
+
+      encryptionKey = await this.api.request({
+        url: `v1/data-sources?type=keystore`
+      }).then(async (response) => {
+        let dataSource;
+
+        if (!response.data.dataSources.length) {
+          log.debug('[ENCRYPTION] Generating new keystore...');
+
+          const organizations = await this.api.request({
+            url: 'v1/organizations'
+          }).then((response) => response.data.organizations);
+
+          const organization = _.first(organizations);
+
+          log.debug(`Fetched organization ${organization.name}`);
+
+          const result = await this.api.request({
+            method: 'POST',
+            url: 'v1/data-sources',
+            data: {
+              name: 'Keystore',
+              type: 'keystore',
+              organizationId: organization.id
+            }
+          });
+
+          dataSource = result.data.dataSource;
+        } else {
+          dataSource = _.first(response.data.dataSources);
+          log.info('[ENCRYPTION] Keystore found.');
+        }
+
+        const entry = await this.api.request({
+          url: `v1/data-sources/${dataSource.id}/data/query`,
+          method: 'POST',
+          data: {
+            where: { dataSourceId: operation.targetDataSourceId }
+          }
+        }).then((response) => {
+          return _.first(response.data.entries);
+        });
+
+        if (entry && entry.data.content) {
+          log.info('[ENCRYPTION] Key found. Decrypting key...');
+
+          return Crypt.salt(keySalt).decrypt(entry.data.content);
+        }
+
+        log.info('[ENCRYPTION] Generating new key...');
+
+        // Create new key
+        const key = Crypt.generateKey();
+        console.log('>>', key)
+        const encryptedKey = Crypt.salt(keySalt).encrypt(key);
+
+        log.info('[ENCRYPTION] Uploading key to Fliplet APIs...');
+
+        await this.api.request({
+          url: `v1/data-sources/${dataSource.id}/data`,
+          method: 'PUT',
+          data: {
+            dataSourceId: operation.targetDataSourceId,
+            content: encryptedKey
+          }
+        });
+
+        return key;
+      });
+    }
   }
 
   log.info('[PUSH] Fetching data via Fliplet API...');
@@ -351,6 +439,22 @@ agent.prototype.runPushOperation = function runPushOperation(operation) {
 
         log.debug('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
         return;
+      }
+
+      if (encryptionKey && commits.length) {
+        log.info('[ENCRYPTION] Encrypting data before it\'s committed...');
+
+        commits.forEach((entry) => {
+          operation.encrypt.fields.forEach((field) => {
+            if (!_.get(entry.data, field)) {
+              return;
+            }
+
+            entry.data[field] = Crypt.salt(encryptionKey).encrypt(entry.data[field]);
+          });
+        });
+
+        log.info('[ENCRYPTION] All data have been encrypted.');
       }
 
       return this.api.request({
