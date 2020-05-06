@@ -189,6 +189,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           method: 'PUT',
           data: {
             createdAt: moment().unix(),
+            source: 'Fliplet Agent',
             content: encryptedKey
           }
         });
