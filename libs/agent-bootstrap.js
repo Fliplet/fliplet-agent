@@ -96,7 +96,8 @@ try {
           runHooks: doc.run_hooks,
           targetDataSourceId: doc.datasource_id,
           files: doc.files,
-          concurrency: doc.concurrency
+          concurrency: doc.concurrency,
+          encrypt: doc.encrypt
         });
       }
     };

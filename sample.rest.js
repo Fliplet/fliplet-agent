@@ -23,7 +23,10 @@ module.exports.setup = (agent) => {
     source: (rest) => rest.get('https://jsonplaceholder.typicode.com/todos'),
     primaryColumnName: 'id',
     timestampColumnName: 'updatedAt',
-    targetDataSourceId: 123
+    targetDataSourceId: 123,
+    encrypt: {
+      fields: ['title']
+    }
   });
 
   // Pull data from a Fliplet Data Source
