@@ -149,11 +149,8 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
         }
 
         const entry = await this.api.request({
-          url: `v1/data-sources/${dataSource.id}/data/query`,
-          method: 'POST',
-          data: {
-            where: { dataSourceId: operation.targetDataSourceId }
-          }
+          url: `v1/data-sources/${dataSource.id}/data`,
+          method: 'GET'
         }).then((response) => {
           return _.first(response.data.entries);
         });
@@ -176,7 +173,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           url: `v1/data-sources/${dataSource.id}/data`,
           method: 'PUT',
           data: {
-            dataSourceId: operation.targetDataSourceId,
+            createdAt: moment().unix(),
             content: encryptedKey
           }
         });
