@@ -114,7 +114,8 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
     } else {
       log.debug('[ENCRYPTION] A key has not been defined. Fetching the key from Fliplet servers...');
 
-      const keySalt = operation.encrypt.salt || `dataSource-${operation.targetDataSourceId}`;
+      let keySalt = operation.encrypt.salt;
+      let organizationId;
 
       encryptionKey = await this.api.request({
         url: `v1/data-sources?type=keystore`
@@ -130,6 +131,8 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
           const organization = _.first(organizations);
 
+          organizationId = organization.id;
+
           log.debug(`Fetched organization ${organization.name}`);
 
           const result = await this.api.request({
@@ -138,14 +141,20 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
             data: {
               name: 'Keystore',
               type: 'keystore',
-              organizationId: organization.id
+              organizationId
             }
           });
 
           dataSource = result.data.dataSource;
         } else {
           dataSource = _.first(response.data.dataSources);
+          organizationId = dataSource.organizationId;
+
           log.info('[ENCRYPTION] Keystore found.');
+        }
+
+        if (!keySalt) {
+          keySalt = organizationId + '-' + dataSource.id;
         }
 
         const entry = await this.api.request({
@@ -158,7 +167,13 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
         if (entry && entry.data.content) {
           log.info('[ENCRYPTION] Key found. Decrypting key...');
 
-          return Crypt.salt(keySalt).decrypt(entry.data.content);
+          const key = Crypt.salt(keySalt).decrypt(entry.data.content);
+
+          if (key) {
+            return key;
+          }
+
+          log.critical('The salt provided for the key decryption is incorrect');
         }
 
         log.info('[ENCRYPTION] Generating new key...');
