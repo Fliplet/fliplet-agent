@@ -44,7 +44,7 @@ const agent = function initAgent(config) {
       : (new Sequelize(this.config.database));
   }
 
-  this.api = new API(this.config.authToken);
+  this.api = new API(this.config.authToken, this.config.baseURL);
   this.files = new Files(this.api);
 
   const authenticate = this.db ? this.db.authenticate() : Promise.resolve();

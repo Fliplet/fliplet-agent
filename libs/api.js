@@ -9,14 +9,14 @@ const regions = {
   us: 'https://us.api.fliplet.com'
 };
 
-const API = function (authToken) {
+const API = function (authToken, baseURL) {
   if (!authToken) {
     log.critical('Auth token is required');
   }
 
   this.region = authToken.substr(0, 2).toLowerCase();
   this.authToken = authToken;
-  this.baseURL = regions[this.region] || regions.eu;
+  this.baseURL = baseURL || regions[this.region] || regions.eu;
 
   log.info(`[API] User Agent for outgoing HTTP requests has been set to ${userAgent}`);
   log.debug(`[API] Regional URL has been set to ${this.baseURL}`);
