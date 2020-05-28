@@ -26,7 +26,8 @@ module.exports.setup = (agent) => {
     targetDataSourceId: 123,
     encrypt: {
       fields: ['title']
-    }
+    },
+    extend: true
   });
 
   // Pull data from a Fliplet Data Source

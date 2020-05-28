@@ -42,6 +42,7 @@ module.exports.setup = (agent) => {
     primaryColumnName: 'id',
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123,
-    runHooks: []
+    runHooks: [],
+    extend: true
   });
 };
