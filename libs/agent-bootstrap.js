@@ -97,7 +97,8 @@ try {
           targetDataSourceId: doc.datasource_id,
           files: doc.files,
           concurrency: doc.concurrency,
-          encrypt: doc.encrypt
+          encrypt: doc.encrypt,
+          extend: doc.extend
         });
       }
     };
