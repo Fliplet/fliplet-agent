@@ -98,7 +98,7 @@ try {
           files: doc.files,
           concurrency: doc.concurrency,
           encrypt: doc.encrypt,
-          extend: doc.extend
+          merge: doc.merge
         });
       }
     };

@@ -27,7 +27,7 @@ module.exports.setup = (agent) => {
     encrypt: {
       fields: ['title']
     },
-    extend: true
+    merge: true
   });
 
   // Pull data from a Fliplet Data Source

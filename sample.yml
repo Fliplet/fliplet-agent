@@ -83,7 +83,7 @@ run_hooks:
 
 # Define whether updating entries will merge local columns with remote columns.
 # This is useful if your data is updated by Fliplet Apps.
-extend: true
+merge: true
 
 # Define what columns in your local database rows are URLs to remote or local files
 # to be sync to Fliplet servers when inserting or updating rows.

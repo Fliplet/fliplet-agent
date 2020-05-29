@@ -477,7 +477,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           entries: commits,
           delete: toDelete && toDelete.length ? toDelete : undefined,
           runHooks: operation.runHooks || [],
-          extend: operation.extend
+          extend: operation.merge
         }
       }).then((res) => {
         log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);

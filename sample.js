@@ -43,6 +43,6 @@ module.exports.setup = (agent) => {
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123,
     runHooks: [],
-    extend: true
+    merge: true
   });
 };
