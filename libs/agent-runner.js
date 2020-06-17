@@ -106,6 +106,10 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       log.critical('[ENCRYPTION] You need to define a list of fields to encrypt.');
     }
 
+    if (operation.encrypt.fields.indexOf(primaryKey) !== -1) {
+      log.critical('[ENCRYPTION] You cannot encrypt the Primary Key.');
+    }
+
     log.info(`[ENCRYPTION] Encryption is enabled for the following fields: ${operation.encrypt.fields.join(', ')}`);
 
     if (operation.encrypt.key) {
