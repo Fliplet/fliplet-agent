@@ -63,7 +63,7 @@ try {
         isDryRun: isDryRun,
         authToken: doc.auth_token,
         syncOnInit: doc.sync_on_init,
-        log_verbosity: doc.log_verbosity,
+        logVerbosity: doc.log_verbosity,
         database: {
           dialect: doc.database_driver,
           dialectModulePath: doc.database_native_odbc ? 'sequelize-odbc-mssql' : undefined,
@@ -117,7 +117,7 @@ if (typeof config.setup !== 'function') {
   log.critical('[BOOT] Your config file does not export a setup function via module.exports.setup');
 }
 
-log.setVerbosity(config.config.log_verbosity || 'debug');
+log.setVerbosity(config.config.logVerbosity || 'debug');
 
 module.exports.Agent = require('./agent-runner');
 module.exports.config = config;
