@@ -15,7 +15,7 @@ module.exports.config = {
   syncOnInit: true,
 
   // Define the log verbosity, between "debug", "info" and "critical".
-  log_verbosity: 'debug',
+  logVerbosity: 'debug',
 
   // Database connection settings (using Sequelize format)
   // http://docs.sequelizejs.com/
