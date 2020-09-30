@@ -10,6 +10,7 @@ const logFile = fs.createWriteStream(path.join(homeDirectory, 'fliplet-agent.log
 const isService = process.env.SERVICE;
 const logger = {};
 let eventLogger;
+let loggerVerbosity = 'debug';
 
 function getDate() {
   return moment().format('YYYY-MM-DD HH:mm:ss');
@@ -20,6 +21,11 @@ if (isService) {
   const EventLogger = require('node-windows').EventLogger;
   eventLogger = new EventLogger('Fliplet Agent');
 }
+
+logger.setVerbosity = function setVerbosity (verbosity) {
+  logger.info(`[LOG] Setting log verbosity to ${verbosity}.`);
+  loggerVerbosity = verbosity;
+};
 
 logger.error = function (message) {
   message = message.toString();
@@ -48,6 +54,10 @@ logger.critical = function (message) {
 }
 
 logger.info = function (message) {
+  if (loggerVerbosity !== 'debug' && loggerVerbosity !== 'info') {
+    return;
+  }
+
   message = message.toString();
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 
@@ -59,6 +69,10 @@ logger.info = function (message) {
 }
 
 logger.debug = function (message) {
+  if (loggerVerbosity !== 'debug') {
+    return;
+  }
+
   message = message.toString();
   logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
 

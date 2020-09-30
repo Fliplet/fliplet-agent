@@ -93,6 +93,13 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
   const primaryKey = operation.primaryColumnName;
   const timestampKey = operation.timestampColumnName;
   let encryptionKey;
+  let ids = [];
+
+  if (operation.caseInsensitivePrimaryColumn) {
+    log.info('The primary key has been set to be case-insensitive.');
+  } else {
+    log.info('WARN: The primary key has been set to be case-sensitive.');
+  }
 
   // Cleanup
   agent.files.resetState();
@@ -367,6 +374,10 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           }
 
           const id = row[primaryKey];
+          const normalizedPrimaryKey = operation.caseInsensitivePrimaryColumn
+            ? (typeof e.data[primaryKey] === 'string' ? e.data[primaryKey].toLowerCase() : e.data[primaryKey])
+            : id;
+
           const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
 
           if (!id) {
@@ -374,7 +385,20 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
             return Promise.resolve();
           }
 
+          if (ids.indexOf(normalizedPrimaryKey) !== -1) {
+            log.error(`A duplicate row has been found for the same primary key. Skipping: ${JSON.stringify(row)}`);
+            return Promise.resolve();
+          }
+
+          ids.push(normalizedPrimaryKey);
+
           const entry = _.find(entries, (e) => {
+            if (operation.caseInsensitivePrimaryColumn) {
+              const remoteKey = typeof id === 'string' ? id.toLowerCase() : id;
+
+              return normalizedPrimaryKey === remoteKey;
+            }
+
             return e.data[primaryKey] === id;
           });
 
@@ -453,7 +477,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
         }
 
-        log.debug('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
+        log.info('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
         return;
       }
 
@@ -521,7 +545,7 @@ agent.prototype.runPullOperation = function runPullOperation(operation) {
     ])
   }).then((response) => {
     const entries = response.data.entries;
-    log.debug(`Fetched ${entries.length} entries from the data source.`);
+    log.info(`Fetched ${entries.length} entries from the data source.`);
 
     let action = operation.action(entries, this.db);
 
