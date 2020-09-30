@@ -96,9 +96,9 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
   let ids = [];
 
   if (operation.caseInsensitivePrimaryColumn) {
-    log.info('The primary key has been set to be case-insensitive.');
+    log.info('[✓] The primary key has been set to be case-insensitive.');
   } else {
-    log.info('WARN: The primary key has been set to be case-sensitive.');
+    log.info('[!] The primary key has been set to be case-sensitive.');
   }
 
   // Cleanup
@@ -375,7 +375,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
           const id = row[primaryKey];
           const normalizedPrimaryKey = operation.caseInsensitivePrimaryColumn
-            ? (typeof e.data[primaryKey] === 'string' ? e.data[primaryKey].toLowerCase() : e.data[primaryKey])
+            ? (typeof row[primaryKey] === 'string' ? row[primaryKey].toLowerCase() : row[primaryKey])
             : id;
 
           const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
@@ -394,7 +394,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
           const entry = _.find(entries, (e) => {
             if (operation.caseInsensitivePrimaryColumn) {
-              const remoteKey = typeof id === 'string' ? id.toLowerCase() : id;
+              const remoteKey = typeof e.data[primaryKey] === 'string' ? e.data[primaryKey].toLowerCase() : e.data[primaryKey];
 
               return normalizedPrimaryKey === remoteKey;
             }
