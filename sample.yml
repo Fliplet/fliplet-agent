@@ -59,6 +59,9 @@ query: SELECT id, email as 'Email', fullName as 'Full Name', updatedAt FROM user
 # has already been added.
 primary_column: id
 
+# Choose whether the primary column should be considered case-sensitive or not.
+case_insensitive_primary_column: true
+
 # Define which (optional) column should be used to compare whether
 # the record has been updated on your database since it got inserted
 # to the Fliplet Data Source hence might require updating
@@ -108,3 +111,6 @@ files:
 #  fields:
 #    - First Name
 #    - Last Name
+
+# Define the log verbosity, between "debug", "info" and "critical".
+log_verbosity: debug

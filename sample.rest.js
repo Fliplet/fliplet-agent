@@ -22,6 +22,7 @@ module.exports.setup = (agent) => {
     frequency: '* * * * *',
     source: (rest) => rest.get('https://jsonplaceholder.typicode.com/todos'),
     primaryColumnName: 'id',
+    caseInsensitivePrimaryColumn: true,
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123,
     encrypt: {

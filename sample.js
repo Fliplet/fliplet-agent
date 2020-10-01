@@ -14,6 +14,9 @@ module.exports.config = {
   // Otherwise, they will just run according to their frequency.
   syncOnInit: true,
 
+  // Define the log verbosity, between "debug", "info" and "critical".
+  logVerbosity: 'debug',
+
   // Database connection settings (using Sequelize format)
   // http://docs.sequelizejs.com/
   database: {
@@ -40,6 +43,7 @@ module.exports.setup = (agent) => {
     frequency: '* * * * *',
     sourceQuery: (db) => db.query('SELECT id, email, "updatedAt" FROM users order by id asc;'),
     primaryColumnName: 'id',
+    caseInsensitivePrimaryColumn: true,
     timestampColumnName: 'updatedAt',
     targetDataSourceId: 123,
     runHooks: [],

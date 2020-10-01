@@ -10,18 +10,18 @@ const fs = require('fs');
 
 require('./logger');
 
-log.info('Parsing configuration options');
+log.debug('[BOOT] Parsing configuration options');
 
 let configPath = process.env.CFGPATH || process.argv[2];
 const isDryRun = process.argv.indexOf('--test') !== -1;
 let config;
 
 if (!configPath) {
-  log.critical('Path to config file is required');
+  log.critical('[BOOT] Path to config file is required');
 }
 
 if (isDryRun) {
-  log.info('Dry run enabled. No data will actually be sent to Fliplet server.');
+  log.info('[BOOT] Dry run enabled. No data will actually be sent to Fliplet server.');
 }
 
 Sentry.configureScope(scope => {
@@ -34,27 +34,27 @@ Sentry.addBreadcrumb({
 
 try {
   if (/\.js$/.test(configPath)) {
-    log.debug(`Parsing Javascript configuration file at ${configPath}`);
+    log.debug(`[BOOT] Parsing Javascript configuration file at ${configPath}`);
 
     // JS configuration file
     try {
       config = require(configPath);
     } catch (e) {
       configPath = path.join(process.cwd(), configPath);
-      log.debug(`Parsing Javascript configuration file at ${configPath}`);
+      log.debug(`[BOOT] Parsing Javascript configuration file at ${configPath}`);
       config = require(configPath);
     }
 
     config.path = configPath;
   } else {
-    log.debug(`Parsing YML configuration file at ${configPath}`);
+    log.debug(`[BOOT] Parsing YML configuration file at ${configPath}`);
     let doc;
 
     try {
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     } catch (e) {
       configPath = path.join(process.cwd(), configPath);
-      log.debug(`Retrying parsing YML configuration file at ${configPath}`);
+      log.debug(`[BOOT] Retrying parsing YML configuration file at ${configPath}`);
       doc = yaml.safeLoad(fs.readFileSync(configPath, 'utf8'));
     }
 
@@ -64,6 +64,7 @@ try {
         isDryRun: isDryRun,
         authToken: doc.auth_token,
         syncOnInit: doc.sync_on_init,
+        logVerbosity: doc.log_verbosity,
         database: {
           dialect: doc.database_driver,
           dialectModulePath: doc.database_native_odbc ? 'sequelize-odbc-mssql' : undefined,
@@ -91,6 +92,7 @@ try {
           frequency: doc.frequency,
           sourceQuery: (db) => db.query(doc.query),
           primaryColumnName: doc.primary_column,
+          caseInsensitivePrimaryColumn: doc.case_insensitive_primary_column,
           timestampColumnName: doc.timestamp_column,
           deleteColumnName: doc.delete_column,
           mode: doc.mode || 'update',
@@ -105,16 +107,18 @@ try {
     };
   }
 } catch (e) {
-  log.critical(`Cannot read config file. Please check whether the path is correct. (Error: ${e.message})`);
+  log.critical(`[BOOT] Cannot read config file. Please check whether the path is correct. (Error: ${e.message})`);
 }
 
 if (!config || typeof config.config !== 'object') {
-  log.critical('Your config file does not export a configuration via module.exports.config');
+  log.critical('[BOOT] Your config file does not export a configuration via module.exports.config');
 }
 
 if (typeof config.setup !== 'function') {
-  log.critical('Your config file does not export a setup function via module.exports.setup');
+  log.critical('[BOOT] Your config file does not export a setup function via module.exports.setup');
 }
+
+log.setVerbosity(config.config.logVerbosity || 'debug');
 
 module.exports.Agent = require('./agent-runner');
 module.exports.config = config;
