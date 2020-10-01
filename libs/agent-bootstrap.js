@@ -43,8 +43,9 @@ try {
       configPath = path.join(process.cwd(), configPath);
       log.debug(`Parsing Javascript configuration file at ${configPath}`);
       config = require(configPath);
-      config.path = configPath;
     }
+
+    config.path = configPath;
   } else {
     log.debug(`Parsing YML configuration file at ${configPath}`);
     let doc;
