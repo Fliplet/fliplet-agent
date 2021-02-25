@@ -85,10 +85,18 @@ agent.prototype.runOperation = function runOperation(operation) {
       return this.runPullOperation(operation);
     case 'notify':
       return this.runCreateNotificationOperation(operation);
+    case 'subscriptions':
+      return this.runSubscriptionsOperation(operation);
     default:
       log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push and createNotification" operations for the time being.`);
   }
 };
+
+agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
+  return this.api.request({
+    url: 'v1/apps/:id/subscriptions'
+  });
+}
 
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
 
@@ -661,6 +669,13 @@ agent.prototype.run = function runOperations() {
     log.info(`Scheduling complete. Keep this process alive and you're good to go!`);
   });
 };
+
+agent.prototype.subscriptions = function getSubscriptions(config) {
+  config.type = 'subscriptions';
+  this.operations.push(config);
+  log.info(`Get subscriptions. Do not schedule.`);
+  return this;
+}
 
 agent.prototype.notify = function createNotification(config) {
   config.type = 'notify';
