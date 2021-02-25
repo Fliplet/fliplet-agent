@@ -66,7 +66,7 @@ module.exports.setup = (agent) => {
     subscriptionIds: [1, 2, 3, 4],
     action: (db) => {
       db.query(`
-        INSERT INTO [LDC].[Fliplet].[Notifications] ([RecipientId],[NotificationText],[Status],[CreatedDateTime],[SentDateTime])) VALUES (?, ?, ?, ?, ?);`, {
+        INSERT INTO [Fliplet].[Notifications] ([RecipientId],[NotificationText],[Status],[CreatedDateTime],[SentDateTime])) VALUES (?, ?, ?, ?, ?);`, {
         replacements: [
           uuidv4(),
           payload.body,
