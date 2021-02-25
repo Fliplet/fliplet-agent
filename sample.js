@@ -53,9 +53,9 @@ module.exports.config = {
 
 
 module.exports.setup = (agent) => {
-  agent.createNotification({
+  agent.notify({
     description: 'Creates notification',
-    frequency: '*/15 * * * *',
+    frequency: '* * * * *',
     title: 'Demo Notification',
     topic: 'Demo Topic',
     payload: {

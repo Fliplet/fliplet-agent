@@ -83,7 +83,7 @@ agent.prototype.runOperation = function runOperation(operation) {
       return this.runPushOperation(operation);
     case 'pull':
       return this.runPullOperation(operation);
-    case 'createNotification':
+    case 'notify':
       return this.runCreateNotificationOperation(operation);
     default:
       log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push and createNotification" operations for the time being.`);
@@ -661,6 +661,13 @@ agent.prototype.run = function runOperations() {
     log.info(`Scheduling complete. Keep this process alive and you're good to go!`);
   });
 };
+
+agent.prototype.notify = function createNotification(config) {
+  config.type = 'notify';
+  this.operations.push(config);
+  log.info(`Creating notification. Do not schedule.`);
+  return this;
+}
 
 agent.prototype.push = function pushData(config) {
   config.type = 'push';
