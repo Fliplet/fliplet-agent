@@ -34,7 +34,6 @@ API.prototype.authenticate = function () {
 };
 
 API.prototype.request = function (options) {
-  log.info(options);
   return axios(options).catch(function (err) {
     if (err.response && err.response.data && err.response.data.message) {
       return Promise.reject(new Error(err.response.data.message));

@@ -87,10 +87,45 @@ agent.prototype.runOperation = function runOperation(operation) {
       return this.runCreateNotificationOperation(operation);
     case 'subscriptions':
       return this.runSubscriptionsOperation(operation);
+    case 'query':
+      return this.runQuerySubscriptionsOperation(operation);
     default:
-      log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push and createNotification" operations for the time being.`);
+      log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push,subscriptions and query" operations for the time being.`);
   }
 };
+
+
+// sourceQuery
+//     sourceQuery: (db) => {
+//         return db.query(`SELECT [RegistrationId],[DOB],[GID],[code],[Email],[Gender],[Address],[Country],[Surname],[Postcode],[Last Name],[First Name],[Mobile Phone],[Notify me using],[Preferred Clinic],[Choose your most relevant services],[Admin],[Password],[Post Code],[User Role],[Column (18)],[Column (19)],[Column (20)],[Column (21)],[Column (22)],[Date of Birth],[Address Line 1],[Address Line 2],[Consent to T&Cs],[Email address],[Mobile number],[Image] FROM [LDC].[Fliplet].[Registration data];`);
+//     },
+//     primaryColumnName: 'RegistrationId', // TODO: Separate SQL artefacts from Fliplet artefacts
+//     caseInsensitivePrimaryColumn: false,
+//     timestampColumnName: 'updatedAt',
+//     // https://developers.fliplet.com/Data-integration-service.html#synchronization-mode
+//     mode: 'update', // dedupe db table on target and change mode to update
+//     deleteColumnName: 'deletedAt',
+agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscriptionsOperation(operation) {
+  return this.api.request({
+    url: 'v1/apps/:id/subscriptions'
+  }).then(response => {
+    if (typeof operation.sourceQuery === 'function') {
+      log.info('Fetching data from the database...');
+      fetchData = operation.sourceQuery(this.db);
+    } else if (typeof operation.source === 'function') {
+      log.info('Fetching data from manual source...');
+      fetchData = operation.source(axios);
+    } else {
+      log.critical('Source query or operation is not defined');
+    }
+
+    return fetchData.then(async (result) => {
+      let rows;
+
+      log.debug('Successfully fetched data from the source.');
+    });
+  });
+}
 
 agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
   return this.api.request({
@@ -669,6 +704,13 @@ agent.prototype.run = function runOperations() {
     log.info(`Scheduling complete. Keep this process alive and you're good to go!`);
   });
 };
+
+agent.prototype.query = function querySubscriptions(config) {
+  config.type = 'query';
+  this.operations.push(config);
+  log.info(`Query subscriptions.`);
+  return this;
+}
 
 agent.prototype.subscriptions = function getSubscriptions(config) {
   config.type = 'subscriptions';
