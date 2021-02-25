@@ -83,10 +83,60 @@ agent.prototype.runOperation = function runOperation(operation) {
       return this.runPushOperation(operation);
     case 'pull':
       return this.runPullOperation(operation);
+    case 'createNotification':
+      return this.runCreateNotificationOperation(operation);
     default:
-      log.critical(`Operation "${operation.type}" does not exist. We only support "push" operations for the time being.`);
+      log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push and createNotification" operations for the time being.`);
   }
 };
+
+agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
+
+  return this.api.request({
+    url: 'v1/apps/:id/notifications',
+    method: 'PUT',
+    data: {
+      data: {
+        message: operation.title /* "John posted an article." */
+      },
+      scope: [
+        {
+          topic: operation.topic /* "company-updates" */
+        }
+      ],
+      status: operation.status, /*'published' | 'draft'*/
+      pushNotification: {
+        payload: {
+          title: operation.payload.title,
+          body: operation.payload.body
+        },
+        subscriptions: operation.subscriptionIds
+      }
+    }
+  }).then((response) => {
+    log.info(`${response}`);
+
+    let action = operation.action(this.db);
+
+    if (!(action instanceof Promise)) {
+      action = Promise.resolve();
+    }
+
+    return action.then(function () {
+      log.info(`Action completed.`);
+    });
+  }).catch((err) => {
+    if (!err.response) {
+      return log.critical(err);
+    }
+
+    if (err.response.status) {
+      return log.critical(`${err.response}`);
+    }
+
+    return Promise.reject(err);
+  });
+}
 
 agent.prototype.runPushOperation = async function runPushOperation(operation) {
   const agent = this;
@@ -133,7 +183,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       }).then(async (response) => {
         let dataSource;
 
-        if (!response.data.dataSources.length) {
+        if (!response.data.dataSources.length) {
           log.debug('[ENCRYPTION] Generating new keystore...');
 
           const organizations = await this.api.request({
@@ -282,7 +332,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       await Promise.all(rows.map((row) => {
         return limit(async function () {
           async function syncFiles(entryId) {
-            if (Array.isArray(operation.files) && operation.files.length) {
+            if (Array.isArray(operation.files) && operation.files.length) {
               await Promise.all(operation.files.map(function (definition) {
                 let fileUrl = row[definition.column];
 
@@ -572,12 +622,12 @@ agent.prototype.runPullOperation = function runPullOperation(operation) {
 agent.prototype.run = function runOperations() {
   const initRun = this.config.syncOnInit
     ? Promise.all(this.operations.map((operation) => {
-        return series(() => this.runOperation(operation))
-      })).then(() => {
-        if (this.operations.length > 1) {
-          log.info('Finished to run all operations.');
-        }
-      })
+      return series(() => this.runOperation(operation))
+    })).then(() => {
+      if (this.operations.length > 1) {
+        log.info('Finished to run all operations.');
+      }
+    })
     : Promise.resolve();
 
   initRun.then(() => {
