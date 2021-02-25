@@ -78,15 +78,3 @@ module.exports.setup = (agent) => {
     }
   });
 };
-
-/*
-this.db.query(`
-        INSERT INTO [LDC].[Fliplet].[Notifications] ([RecipientId],[NotificationText],[Status],[CreatedDateTime],[SentDateTime])) VALUES (?, ?, ?, ?, ?);`, {
-                replacements: [
-                    uuidv4(),
-                    payload.body,
-                    1,
-                    Date.now(),
-                    Date.now()
-                ]
-*/
