@@ -128,6 +128,7 @@ agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscrip
 }
 
 agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
+  log.info(JSON.stringify(operation));
   return this.api.request({
     url: `v1/apps/${operation.id}/subscriptions`
   }).then((response) => {
