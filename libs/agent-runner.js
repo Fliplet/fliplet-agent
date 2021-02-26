@@ -129,14 +129,37 @@ agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscrip
 
 agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
   return this.api.request({
-    url: 'v1/apps/:id/subscriptions'
+    url: `v1/apps/${operation.id}/subscriptions`
+  }).then((response) => {
+    const entries = response.subscriptions;
+    log.info(`Fetched ${entries.length} entries from the data source.`);
+
+    let action = operation.action(entries, this.db);
+
+    if (!(action instanceof Promise)) {
+      action = Promise.resolve();
+    }
+
+    return action.then(() => {
+      log.info(`Subscriptions finished.`);
+    })
+  }).catch((err) => {
+    if (!err.response) {
+      return log.critical(err);
+    }
+
+    if (err.response.status) {
+      return log.critical(`You don't have access to the dataSource ${operation.id}. Please check the permissions of your Fliplet user.`);
+    }
+
+    return Promise.reject(err);
   });
 }
 
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
 
   return this.api.request({
-    url: 'v1/apps/:id/notifications',
+    url: `v1/apps/${operation.id}/notifications`,
     method: 'PUT',
     data: {
       data: {
