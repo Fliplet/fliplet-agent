@@ -107,7 +107,7 @@ agent.prototype.runOperation = function runOperation(operation) {
 //     deleteColumnName: 'deletedAt',
 agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscriptionsOperation(operation) {
   return this.api.request({
-    url: 'v1/apps/:id/subscriptions'
+    url: `v1/apps/{${operation.id}}/subscriptions`
   }).then(response => {
     if (typeof operation.sourceQuery === 'function') {
       log.info('Fetching data from the database...');
@@ -130,7 +130,7 @@ agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscrip
 agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
   log.info(JSON.stringify(operation));
   return this.api.request({
-    url: `v1/apps/${operation.id}/subscriptions`
+    url: `v1/apps/{${operation.id}}/subscriptions`
   }).then((response) => {
     const entries = response.subscriptions;
     log.info(`Fetched ${entries.length} entries from the data source.`);
@@ -150,7 +150,7 @@ agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOpera
     }
 
     if (err.response.status) {
-      return log.critical(`You don't have access to the dataSource ${operation.id}. Please check the permissions of your Fliplet user.`);
+      return log.critical(`You don't have access to the dataSource {${operation.id}}. Please check the permissions of your Fliplet user.`);
     }
 
     return Promise.reject(err);
@@ -160,7 +160,7 @@ agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOpera
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
 
   return this.api.request({
-    url: `v1/apps/${operation.id}/notifications`,
+    url: `v1/apps/{${operation.id}}/notifications`,
     method: 'PUT',
     data: {
       data: {
