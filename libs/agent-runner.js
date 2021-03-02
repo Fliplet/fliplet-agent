@@ -20,78 +20,78 @@ const Crypt = require('./crypt');
 const series = promiseLimit(1);
 
 const agent = function initAgent(config) {
-  log.info('Initialising connection with source database...');
+    log.info('Initialising connection with source database...');
 
-  this.operations = [];
+    this.operations = [];
 
-  this.config = _.extend({
-    isDryRun: false,
-    syncOnInit: true
-  }, config);
+    this.config = _.extend({
+        isDryRun: false,
+        syncOnInit: true
+    }, config);
 
-  if (typeof this.config.database === 'object' && Object.keys(this.config.database).length) {
-    // Extend db settings
-    this.config.database = _.extend({
-      operatorsAliases: false,
-      logging(query) {
-        log.debug(`[QUERY] ${query}`);
-      }
-    }, this.config.database);
+    if (typeof this.config.database === 'object' && Object.keys(this.config.database).length) {
+        // Extend db settings
+        this.config.database = _.extend({
+            operatorsAliases: false,
+            logging(query) {
+                log.debug(`[QUERY] ${query}`);
+            }
+        }, this.config.database);
 
-    // Init connections
-    this.db = this.config.database.url
-      ? (new Sequelize(this.config.database.url, this.config.database))
-      : (new Sequelize(this.config.database));
-  }
+        // Init connections
+        this.db = this.config.database.url ?
+            (new Sequelize(this.config.database.url, this.config.database)) :
+            (new Sequelize(this.config.database));
+    }
 
-  this.api = new API(this.config.authToken, this.config.baseURL);
-  this.files = new Files(this.api);
+    this.api = new API(this.config.authToken, this.config.baseURL);
+    this.files = new Files(this.api);
 
-  const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
+    const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
 
-  return authenticate
-    .catch(err => {
-      log.critical(`Unable to connect to the database: ${err.message}`);
-    })
-    .then(() => {
-      log.info('Connection has been established successfully.');
-      log.info('Authenticating with Fliplet API...');
+    return authenticate
+        .catch(err => {
+            log.critical(`Unable to connect to the database: ${err.message}`);
+        })
+        .then(() => {
+            log.info('Connection has been established successfully.');
+            log.info('Authenticating with Fliplet API...');
 
-      return this.api.authenticate();
-    })
-    .catch(err => {
-      log.critical(`Unable to authenticate with Fliplet API: ${err.message}`);
-    })
-    .then((response) => {
-      log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
+            return this.api.authenticate();
+        })
+        .catch(err => {
+            log.critical(`Unable to authenticate with Fliplet API: ${err.message}`);
+        })
+        .then((response) => {
+            log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
 
-      Sentry.configureScope((scope) => {
-        scope.setUser(_.pick(response.data.user, [
-          'id', 'email', 'auth_token', 'firstName', 'lastName'
-        ]));
-      });
+            Sentry.configureScope((scope) => {
+                scope.setUser(_.pick(response.data.user, [
+                    'id', 'email', 'auth_token', 'firstName', 'lastName'
+                ]));
+            });
 
-      return this;
-    });
+            return this;
+        });
 };
 
 agent.prototype.runOperation = function runOperation(operation) {
-  log.info(`${operation.description}`);
+    log.info(`${operation.description}`);
 
-  switch (operation.type) {
-    case 'push':
-      return this.runPushOperation(operation);
-    case 'pull':
-      return this.runPullOperation(operation);
-    case 'notify':
-      return this.runCreateNotificationOperation(operation);
-    case 'subscriptions':
-      return this.runSubscriptionsOperation(operation);
-    case 'query':
-      return this.runQuerySubscriptionsOperation(operation);
-    default:
-      log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push,subscriptions and query" operations for the time being.`);
-  }
+    switch (operation.type) {
+        case 'push':
+            return this.runPushOperation(operation);
+        case 'pull':
+            return this.runPullOperation(operation);
+        case 'notify':
+            return this.runCreateNotificationOperation(operation);
+        case 'subscriptions':
+            return this.runSubscriptionsOperation(operation);
+        case 'query':
+            return this.runQuerySubscriptionsOperation(operation);
+        default:
+            log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push,subscriptions and query" operations for the time being.`);
+    }
 };
 
 
@@ -106,324 +106,324 @@ agent.prototype.runOperation = function runOperation(operation) {
 //     mode: 'update', // dedupe db table on target and change mode to update
 //     deleteColumnName: 'deletedAt',
 agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscriptionsOperation(operation) {
-  return this.api.request({
-    url: `v1/apps/${operation.id}/subscriptions/`
-  }).then(response => {
-    if (typeof operation.sourceQuery === 'function') {
-      log.info('Fetching data from the database...');
-      fetchData = operation.sourceQuery(this.db);
-    } else if (typeof operation.source === 'function') {
-      log.info('Fetching data from manual source...');
-      fetchData = operation.source(axios);
-    } else {
-      log.critical('Source query or operation is not defined');
-    }
+    log.info(JSON.stringify(operation));
+    return this.api.request({
+        url: `v1/apps/${operation.id}/subscriptions`
+    }).then(response => {
+        if (typeof operation.sourceQuery === 'function') {
+            log.info('Fetching data from the database...');
+            fetchData = operation.sourceQuery(this.db);
+        } else if (typeof operation.source === 'function') {
+            log.info('Fetching data from manual source...');
+            fetchData = operation.source(axios);
+        } else {
+            log.critical('Source query or operation is not defined');
+        }
 
-    return fetchData.then(async (result) => {
-      let rows;
+        return fetchData.then(async(result) => {
+            let rows;
 
-      log.debug('Successfully fetched data from the source.');
+            log.debug('Successfully fetched data from the source.');
+        });
     });
-  });
 }
 
 agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
-  log.info(JSON.stringify(operation));
-  return this.api.request({
-    url: `v1/apps/${operation.id}/subscriptions/`
-  }).then((response) => {
-    const entries = response.subscriptions;
-    log.info(`Fetched ${entries.length} entries from the data source.`);
+    log.info(JSON.stringify(operation));
+    return this.api.request({
+        url: `v1/apps/${operation.id}/subscriptions`
+    }).then((response) => {
+        const entries = response.subscriptions;
+        log.info(`Fetched ${entries.length} entries from the data source.`);
 
-    let action = operation.action(entries, this.db);
+        let action = operation.action(entries, this.db);
 
-    if (!(action instanceof Promise)) {
-      action = Promise.resolve();
-    }
+        if (!(action instanceof Promise)) {
+            action = Promise.resolve();
+        }
 
-    return action.then(() => {
-      log.info(`Subscriptions finished.`);
-    })
-  }).catch((err) => {
-    if (!err.response) {
-      return log.critical(err);
-    }
+        return action.then(() => {
+            log.info(`Subscriptions finished.`);
+        })
+    }).catch((err) => {
+        if (!err.response) {
+            return log.critical(err);
+        }
 
-    if (err.response.status) {
-      return log.critical(`You don't have access to the dataSource ${operation.id}. Please check the permissions of your Fliplet user.`);
-    }
+        if (err.response.status) {
+            return log.critical(`You don't have access to the dataSource ${operation.id}. Please check the permissions of your Fliplet user.`);
+        }
 
-    return Promise.reject(err);
-  });
+        return Promise.reject(err);
+    });
 }
 
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
-
-  return this.api.request({
-    url: `v1/apps/${operation.id}/notifications/`,
-    method: 'PUT',
-    data: {
-      data: {
-        message: operation.title /* "John posted an article." */
-      },
-      scope: [
-        {
-          topic: operation.topic /* "company-updates" */
+    log.info(JSON.stringify(operation));
+    return this.api.request({
+        url: `v1/apps/${operation.id}/notifications`,
+        method: 'PUT',
+        data: {
+            data: {
+                message: operation.title /* "John posted an article." */
+            },
+            scope: [{
+                topic: operation.topic /* "company-updates" */
+            }],
+            status: operation.status,
+            /*'published' | 'draft'*/
+            pushNotification: {
+                payload: {
+                    title: operation.payload.title,
+                    body: operation.payload.body
+                },
+                subscriptions: operation.subscriptionIds
+            }
         }
-      ],
-      status: operation.status, /*'published' | 'draft'*/
-      pushNotification: {
-        payload: {
-          title: operation.payload.title,
-          body: operation.payload.body
-        },
-        subscriptions: operation.subscriptionIds
-      }
-    }
-  }).then((response) => {
-    log.info(`${response}`);
+    }).then((response) => {
+        log.info(`${response}`);
 
-    let action = operation.action(this.db);
+        let action = operation.action(this.db);
 
-    if (!(action instanceof Promise)) {
-      action = Promise.resolve();
-    }
+        if (!(action instanceof Promise)) {
+            action = Promise.resolve();
+        }
 
-    return action.then(function () {
-      log.info(`Action completed.`);
+        return action.then(function() {
+            log.info(`Action completed.`);
+        });
+    }).catch((err) => {
+        if (!err.response) {
+            return log.critical(err);
+        }
+
+        if (err.response.status) {
+            return log.critical(`${err.response}`);
+        }
+
+        return Promise.reject(err);
     });
-  }).catch((err) => {
-    if (!err.response) {
-      return log.critical(err);
-    }
-
-    if (err.response.status) {
-      return log.critical(`${err.response}`);
-    }
-
-    return Promise.reject(err);
-  });
 }
 
 agent.prototype.runPushOperation = async function runPushOperation(operation) {
-  const agent = this;
-  const primaryKey = operation.primaryColumnName;
-  const timestampKey = operation.timestampColumnName;
-  let encryptionKey;
-  let ids = [];
+        const agent = this;
+        const primaryKey = operation.primaryColumnName;
+        const timestampKey = operation.timestampColumnName;
+        let encryptionKey;
+        let ids = [];
 
-  if (operation.caseInsensitivePrimaryColumn) {
-    log.info('[✓] The primary key has been set to be case-insensitive.');
-  } else {
-    log.info('[!] The primary key has been set to be case-sensitive.');
-  }
+        if (operation.caseInsensitivePrimaryColumn) {
+            log.info('[✓] The primary key has been set to be case-insensitive.');
+        } else {
+            log.info('[!] The primary key has been set to be case-sensitive.');
+        }
 
-  // Cleanup
-  agent.files.resetState();
+        // Cleanup
+        agent.files.resetState();
 
-  if (!primaryKey) {
-    log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
-  }
+        if (!primaryKey) {
+            log.error('Warning: A primary key has not been set, which means rows will always be appended to the data source whenever this script runs. To allow updating rows, please define a primary key to be used for the comparison.');
+        }
 
-  if (operation.encrypt) {
-    if (!_.get(operation, 'encrypt.fields', []).length) {
-      log.critical('[ENCRYPTION] You need to define a list of fields to encrypt.');
-    }
-
-    if (operation.encrypt.fields.indexOf(primaryKey) !== -1) {
-      log.critical('[ENCRYPTION] You cannot encrypt the Primary Key.');
-    }
-
-    log.info(`[ENCRYPTION] Encryption is enabled for the following fields: ${operation.encrypt.fields.join(', ')}`);
-
-    if (operation.encrypt.key) {
-      log.debug('[ENCRYPTION] A key has been defined by the operation.');
-      encryptionKey = operation.encrypt.key;
-    } else {
-      log.debug('[ENCRYPTION] A key has not been defined. Fetching the key from Fliplet servers...');
-
-      let keySalt = operation.encrypt.salt;
-      let organizationId;
-
-      encryptionKey = await this.api.request({
-        url: `v1/data-sources?type=keystore`
-      }).then(async (response) => {
-        let dataSource;
-
-        if (!response.data.dataSources.length) {
-          log.debug('[ENCRYPTION] Generating new keystore...');
-
-          const organizations = await this.api.request({
-            url: 'v1/organizations'
-          }).then((response) => response.data.organizations);
-
-          const organization = _.first(organizations);
-
-          organizationId = organization.id;
-
-          log.debug(`Fetched organization ${organization.name}`);
-
-          const result = await this.api.request({
-            method: 'POST',
-            url: 'v1/data-sources',
-            data: {
-              name: 'Keystore',
-              type: 'keystore',
-              organizationId
+        if (operation.encrypt) {
+            if (!_.get(operation, 'encrypt.fields', []).length) {
+                log.critical('[ENCRYPTION] You need to define a list of fields to encrypt.');
             }
-          });
 
-          dataSource = result.data.dataSource;
-        } else {
-          dataSource = _.first(response.data.dataSources);
-          organizationId = dataSource.organizationId;
+            if (operation.encrypt.fields.indexOf(primaryKey) !== -1) {
+                log.critical('[ENCRYPTION] You cannot encrypt the Primary Key.');
+            }
 
-          log.info('[ENCRYPTION] Keystore found.');
-        }
+            log.info(`[ENCRYPTION] Encryption is enabled for the following fields: ${operation.encrypt.fields.join(', ')}`);
 
-        if (!keySalt) {
-          keySalt = organizationId + '-' + dataSource.id;
-        }
+            if (operation.encrypt.key) {
+                log.debug('[ENCRYPTION] A key has been defined by the operation.');
+                encryptionKey = operation.encrypt.key;
+            } else {
+                log.debug('[ENCRYPTION] A key has not been defined. Fetching the key from Fliplet servers...');
 
-        const entry = await this.api.request({
-          url: `v1/data-sources/${dataSource.id}/data`,
-          method: 'GET'
-        }).then((response) => {
-          return _.first(response.data.entries);
-        });
+                let keySalt = operation.encrypt.salt;
+                let organizationId;
 
-        if (entry && entry.data.content) {
-          log.info('[ENCRYPTION] Key found. Decrypting key...');
+                encryptionKey = await this.api.request({
+                    url: `v1/data-sources?type=keystore`
+                }).then(async(response) => {
+                    let dataSource;
 
-          const key = Crypt.salt(keySalt).decrypt(entry.data.content);
+                    if (!response.data.dataSources.length) {
+                        log.debug('[ENCRYPTION] Generating new keystore...');
 
-          if (key) {
-            return key;
-          }
+                        const organizations = await this.api.request({
+                            url: 'v1/organizations'
+                        }).then((response) => response.data.organizations);
 
-          log.critical('The salt provided for the key decryption is incorrect');
-        }
+                        const organization = _.first(organizations);
 
-        log.info('[ENCRYPTION] Generating new key...');
+                        organizationId = organization.id;
 
-        // Create new key
-        const key = Crypt.generateKey();
-        const encryptedKey = Crypt.salt(keySalt).encrypt(key);
+                        log.debug(`Fetched organization ${organization.name}`);
 
-        log.info('[ENCRYPTION] Uploading key to Fliplet APIs...');
+                        const result = await this.api.request({
+                            method: 'POST',
+                            url: 'v1/data-sources',
+                            data: {
+                                name: 'Keystore',
+                                type: 'keystore',
+                                organizationId
+                            }
+                        });
 
-        await this.api.request({
-          url: `v1/data-sources/${dataSource.id}/data`,
-          method: 'PUT',
-          data: {
-            createdAt: moment().unix(),
-            source: 'Fliplet Agent',
-            content: encryptedKey
-          }
-        });
+                        dataSource = result.data.dataSource;
+                    } else {
+                        dataSource = _.first(response.data.dataSources);
+                        organizationId = dataSource.organizationId;
 
-        return key;
-      });
-    }
-  }
+                        log.info('[ENCRYPTION] Keystore found.');
+                    }
 
-  log.info('[PUSH] Fetching data via Fliplet API...');
+                    if (!keySalt) {
+                        keySalt = organizationId + '-' + dataSource.id;
+                    }
 
-  if (Array.isArray(operation.files) && operation.files.length) {
-    log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
-  }
-
-  if (operation.mode === 'replace') {
-    log.info(`Remote entries not found in the local dataset will be deleted ("mode" is set to "replace").`);
-  } else {
-    log.info(`Remote entries not found in the local dataset will be kept ("mode" is set to "update").`);
-  }
-
-  return this.api.request({
-    url: `v1/data-sources/${operation.targetDataSourceId}/data`
-  }).then((response) => {
-    let fetchData;
-    const entries = response.data.entries;
-    log.debug(`Fetched ${entries.length} entries from the data source.`);
-
-    if (typeof operation.sourceQuery === 'function') {
-      log.info('Fetching data from the database...');
-      fetchData = operation.sourceQuery(this.db);
-    } else if (typeof operation.source === 'function') {
-      log.info('Fetching data from manual source...');
-      fetchData = operation.source(axios);
-    } else {
-      log.critical('Source query or operation is not defined');
-    }
-
-    return fetchData.then(async (result) => {
-      let rows;
-
-      log.debug('Successfully fetched data from the source.');
-
-      if (this.db) {
-        rows = result[0];
-        log.debug(`Fetched ${rows.length} rows from the database.`);
-      } else {
-        if (result.data) {
-          result = result.data;
-        }
-
-        if (Array.isArray(result)) {
-          rows = result;
-          log.debug(`Fetched ${rows.length} rows from manual source.`);
-        } else {
-          rows = [];
-          log.error(`Response from source did not return an array of entries.`);
-        }
-      }
-
-      const commits = [];
-      let toDelete = [];
-
-      if (operation.deleteColumnName) {
-        log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
-      }
-
-      if (Array.isArray(operation.runHooks) && operation.runHooks.length) {
-        log.debug(`Post-sync hooks enabled: ${operation.runHooks.join(', ')}`);
-      } else {
-        log.debug(`No post-sync hooks have been enabled`);
-      }
-
-      const concurrency = parseInt(operation.concurrency || 1, 10);
-      const limit = promiseLimit(concurrency);
-
-      log.debug(`Concurrency has been set to ${concurrency}.`);
-
-      await Promise.all(rows.map((row) => {
-        return limit(async function () {
-          async function syncFiles(entryId) {
-            if (Array.isArray(operation.files) && operation.files.length) {
-              await Promise.all(operation.files.map(function (definition) {
-                let fileUrl = row[definition.column];
-
-                if (!fileUrl) {
-                  return;
-                }
-
-                let operation;
-
-                switch (definition.type) {
-                  case 'remote':
-                    log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
-                    operation = axios.request({
-                      url: fileUrl,
-                      responseType: 'arraybuffer',
-                      headers: definition.headers
+                    const entry = await this.api.request({
+                        url: `v1/data-sources/${dataSource.id}/data`,
+                        method: 'GET'
                     }).then((response) => {
-                      const parsedUrl = url.parse(fileUrl);
-                      const contentType = response.headers['content-type'];
-                      const extension = mime.getExtension(contentType);
+                        return _.first(response.data.entries);
+                    });
 
-                      return {
-                        body: response.data,
-                        name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                    if (entry && entry.data.content) {
+                        log.info('[ENCRYPTION] Key found. Decrypting key...');
+
+                        const key = Crypt.salt(keySalt).decrypt(entry.data.content);
+
+                        if (key) {
+                            return key;
+                        }
+
+                        log.critical('The salt provided for the key decryption is incorrect');
+                    }
+
+                    log.info('[ENCRYPTION] Generating new key...');
+
+                    // Create new key
+                    const key = Crypt.generateKey();
+                    const encryptedKey = Crypt.salt(keySalt).encrypt(key);
+
+                    log.info('[ENCRYPTION] Uploading key to Fliplet APIs...');
+
+                    await this.api.request({
+                        url: `v1/data-sources/${dataSource.id}/data`,
+                        method: 'PUT',
+                        data: {
+                            createdAt: moment().unix(),
+                            source: 'Fliplet Agent',
+                            content: encryptedKey
+                        }
+                    });
+
+                    return key;
+                });
+            }
+        }
+
+        log.info('[PUSH] Fetching data via Fliplet API...');
+
+        if (Array.isArray(operation.files) && operation.files.length) {
+            log.info(`${operation.files.length} column(s) marked as files: ${_.map(operation.files, 'column').join(', ')}.`);
+        }
+
+        if (operation.mode === 'replace') {
+            log.info(`Remote entries not found in the local dataset will be deleted ("mode" is set to "replace").`);
+        } else {
+            log.info(`Remote entries not found in the local dataset will be kept ("mode" is set to "update").`);
+        }
+
+        return this.api.request({
+                url: `v1/data-sources/${operation.targetDataSourceId}/data`
+            }).then((response) => {
+                    let fetchData;
+                    const entries = response.data.entries;
+                    log.debug(`Fetched ${entries.length} entries from the data source.`);
+
+                    if (typeof operation.sourceQuery === 'function') {
+                        log.info('Fetching data from the database...');
+                        fetchData = operation.sourceQuery(this.db);
+                    } else if (typeof operation.source === 'function') {
+                        log.info('Fetching data from manual source...');
+                        fetchData = operation.source(axios);
+                    } else {
+                        log.critical('Source query or operation is not defined');
+                    }
+
+                    return fetchData.then(async(result) => {
+                                let rows;
+
+                                log.debug('Successfully fetched data from the source.');
+
+                                if (this.db) {
+                                    rows = result[0];
+                                    log.debug(`Fetched ${rows.length} rows from the database.`);
+                                } else {
+                                    if (result.data) {
+                                        result = result.data;
+                                    }
+
+                                    if (Array.isArray(result)) {
+                                        rows = result;
+                                        log.debug(`Fetched ${rows.length} rows from manual source.`);
+                                    } else {
+                                        rows = [];
+                                        log.error(`Response from source did not return an array of entries.`);
+                                    }
+                                }
+
+                                const commits = [];
+                                let toDelete = [];
+
+                                if (operation.deleteColumnName) {
+                                    log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
+                                }
+
+                                if (Array.isArray(operation.runHooks) && operation.runHooks.length) {
+                                    log.debug(`Post-sync hooks enabled: ${operation.runHooks.join(', ')}`);
+                                } else {
+                                    log.debug(`No post-sync hooks have been enabled`);
+                                }
+
+                                const concurrency = parseInt(operation.concurrency || 1, 10);
+                                const limit = promiseLimit(concurrency);
+
+                                log.debug(`Concurrency has been set to ${concurrency}.`);
+
+                                await Promise.all(rows.map((row) => {
+                                                return limit(async function() {
+                                                            async function syncFiles(entryId) {
+                                                                if (Array.isArray(operation.files) && operation.files.length) {
+                                                                    await Promise.all(operation.files.map(function(definition) {
+                                                                                    let fileUrl = row[definition.column];
+
+                                                                                    if (!fileUrl) {
+                                                                                        return;
+                                                                                    }
+
+                                                                                    let operation;
+
+                                                                                    switch (definition.type) {
+                                                                                        case 'remote':
+                                                                                            log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                                                                                            operation = axios.request({
+                                                                                                    url: fileUrl,
+                                                                                                    responseType: 'arraybuffer',
+                                                                                                    headers: definition.headers
+                                                                                                }).then((response) => {
+                                                                                                        const parsedUrl = url.parse(fileUrl);
+                                                                                                        const contentType = response.headers['content-type'];
+                                                                                                        const extension = mime.getExtension(contentType);
+
+                                                                                                        return {
+                                                                                                            body: response.data,
+                                                                                                            name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
                       };
                     });
                     break;
