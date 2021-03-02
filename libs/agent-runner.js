@@ -160,7 +160,6 @@ agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOpera
 
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
     log.info(JSON.stringify(operation));
-    const op = JSON.parse(operation);
     log.info(op.payload);
     const payload = op.payload;
     log.info(payload.title);

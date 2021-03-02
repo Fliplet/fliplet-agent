@@ -1,6 +1,6 @@
 {
     "name": "fliplet-notification-agent",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "description": "Fliplet Notification Agent (Notification service) is a command line utility for Fliplet App Notifications.",
     "main": "fliplet-agent.js",
     "scripts": {
