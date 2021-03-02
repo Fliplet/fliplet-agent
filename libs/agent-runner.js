@@ -134,7 +134,6 @@ agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOpera
         url: `v1/apps/${operation.id}/subscriptions`
     }).then((response) => {
         const entries = response.subscriptions;
-        log.info(`Fetched ${entries.length} entries from the data source.`);
 
         let action = operation.action(entries, this.db);
 
