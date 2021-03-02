@@ -160,22 +160,26 @@ agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOpera
 
 agent.prototype.runCreateNotificationOperation = async function runCreateNotificationOperation(operation) {
     log.info(JSON.stringify(operation));
+    const op = JSON.parse(operation);
+    log.info(op.payload);
+    const payload = op.payload;
+    log.info(payload.title);
     return this.api.request({
         url: `v1/apps/${operation.id}/notifications`,
         method: 'PUT',
         data: {
             data: {
-                message: operation.title /* "John posted an article." */
+                message: op.title /* "John posted an article." */
             },
             scope: [{
-                topic: operation.topic /* "company-updates" */
+                topic: op.topic /* "company-updates" */
             }],
-            status: operation.status,
+            status: op.status,
             /*'published' | 'draft'*/
             pushNotification: {
                 payload: {
-                    title: operation.payload.title,
-                    body: operation.payload.body
+                    title: payload.title,
+                    body: payload.body
                 },
                 subscriptions: operation.subscriptionIds
             }
