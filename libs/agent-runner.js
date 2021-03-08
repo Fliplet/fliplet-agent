@@ -94,7 +94,13 @@ agent.prototype.runOperation = function runOperation(operation) {
 
 agent.prototype.runQueryNotificationsOperation = async function runQueryNotificationsOperation(operation) {
     const id = operation.id;
-    return this.api.request({
+    const notifications = await this.api.request({
+        url: `v1/apps/${id}/notifications`
+    });
+
+    log.info(notifications);
+
+    this.api.request({
         url: `v1/apps/${id}/notifications`
     }).then((response) => {
         let fetchData;
@@ -106,7 +112,7 @@ agent.prototype.runQueryNotificationsOperation = async function runQueryNotifica
             log.info(fetchData);
             return fetchData.then(async(result) => {
                 let rows;
-                log.debug(result);
+                log.debug(JSON.stringify(result));
                 // rows = result[0];
                 return Promise.resolve();
             });
