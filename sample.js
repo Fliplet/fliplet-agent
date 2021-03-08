@@ -42,10 +42,10 @@ module.exports.setup = (agent) => {
             INSERT INTO [Fliplet].[Notifications] ([RecipientId],[NotificationText],[Status],[CreatedDateTime],[SentDateTime])) VALUES (?, ?, ?, ?, ?);`, {
                 replacements: [
                     uuid(),
-                    payload.body,
+                    'Hello world',
                     1,
-                    Date.now(),
-                    Date.now()
+                    new Date().toISOString(),
+                    new Date().toISOString(),
                 ]
             });
         }

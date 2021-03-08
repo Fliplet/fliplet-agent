@@ -85,72 +85,39 @@ agent.prototype.runOperation = function runOperation(operation) {
             return this.runPullOperation(operation);
         case 'notify':
             return this.runCreateNotificationOperation(operation);
-        case 'subscriptions':
-            return this.runSubscriptionsOperation(operation);
-        case 'query':
-            return this.runQuerySubscriptionsOperation(operation);
+        case 'notifications':
+            return this.runQueryNotificationsOperation(operation);
         default:
-            log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push,subscriptions and query" operations for the time being.`);
+            log.critical(`Operation "${operation.type}" does not exist. We only support "pull, push,notifications and notify" operations for the time being.`);
     }
 };
 
-
-// sourceQuery
-//     sourceQuery: (db) => {
-//         return db.query(`SELECT [RegistrationId],[DOB],[GID],[code],[Email],[Gender],[Address],[Country],[Surname],[Postcode],[Last Name],[First Name],[Mobile Phone],[Notify me using],[Preferred Clinic],[Choose your most relevant services],[Admin],[Password],[Post Code],[User Role],[Column (18)],[Column (19)],[Column (20)],[Column (21)],[Column (22)],[Date of Birth],[Address Line 1],[Address Line 2],[Consent to T&Cs],[Email address],[Mobile number],[Image] FROM [LDC].[Fliplet].[Registration data];`);
-//     },
-//     primaryColumnName: 'RegistrationId', // TODO: Separate SQL artefacts from Fliplet artefacts
-//     caseInsensitivePrimaryColumn: false,
-//     timestampColumnName: 'updatedAt',
-//     // https://developers.fliplet.com/Data-integration-service.html#synchronization-mode
-//     mode: 'update', // dedupe db table on target and change mode to update
-//     deleteColumnName: 'deletedAt',
-agent.prototype.runQuerySubscriptionsOperation = async function runQuerySubscriptionsOperation(operation) {
-    log.info(JSON.stringify(operation));
+agent.prototype.runQueryNotificationsOperation = async function runQueryNotificationsOperation(operation) {
+    const id = operation.id;
     return this.api.request({
-        url: `v1/apps/${operation.id}/subscriptions`
-    }).then(response => {
-        if (typeof operation.sourceQuery === 'function') {
-            log.info('Fetching data from the database...');
-            fetchData = operation.sourceQuery(this.db);
-        } else if (typeof operation.source === 'function') {
-            log.info('Fetching data from manual source...');
-            fetchData = operation.source(axios);
-        } else {
-            log.critical('Source query or operation is not defined');
-        }
-
-        return fetchData.then(async(result) => {
-            let rows;
-
-            log.debug('Successfully fetched data from the source.');
-        });
-    });
-}
-
-agent.prototype.runSubscriptionsOperation = async function runSubscriptionsOperation(operation) {
-    log.info(JSON.stringify(operation));
-    return this.api.request({
-        url: `v1/apps/${operation.id}/subscriptions`
+        url: `v1/apps/${id}/notifications`
     }).then((response) => {
-        const entries = response.subscriptions;
-
-        let action = operation.action(entries, this.db);
-
-        if (!(action instanceof Promise)) {
-            action = Promise.resolve();
+        let fetchData;
+        log.info(response);
+        const entries = response.notifications || [];
+        const isArray = Array.isArray(entries);
+        if (isArray) {
+            fetchData = operation.sourceQuery(this.db);
+            log.info(fetchData);
+            return fetchData.then(async(result) => {
+                let rows;
+                log.debug(result);
+                // rows = result[0];
+                return Promise.resolve();
+            });
         }
-
-        return action.then(() => {
-            log.info(`Subscriptions finished.`);
-        })
     }).catch((err) => {
         if (!err.response) {
             return log.critical(err);
         }
 
         if (err.response.status) {
-            return log.critical(`You don't have access to the dataSource ${operation.id}. Please check the permissions of your Fliplet user.`);
+            return log.critical(`You don't have access to the resource with id: ${id}. Please check the permissions of your Fliplet user.`);
         }
 
         return Promise.reject(err);
@@ -167,11 +134,10 @@ agent.prototype.runCreateNotificationOperation = async function runCreateNotific
                 message: operation.title
             },
             scope: [{
-                topic: operation.topic
+                Email: operation.email
             }],
             pushNotification: {
-                payload: payload,
-                subscriptions: operation.subscriptionIds
+                payload: payload
             }
         }
     }).then((response) => {
@@ -721,17 +687,10 @@ agent.prototype.run = function runOperations() {
   });
 };
 
-agent.prototype.query = function querySubscriptions(config) {
-  config.type = 'query';
+agent.prototype.notifications = function getNotifications(config) {
+  config.type = 'notifications';
   this.operations.push(config);
-  log.info(`Query subscriptions.`);
-  return this;
-}
-
-agent.prototype.subscriptions = function getSubscriptions(config) {
-  config.type = 'subscriptions';
-  this.operations.push(config);
-  log.info(`Get subscriptions. Do not schedule.`);
+  log.info(`Schedule notifications.`);
   return this;
 }
 
