@@ -93,12 +93,8 @@ agent.prototype.runOperation = function runOperation(operation) {
 };
 
 agent.prototype.runQueryNotificationsOperation = async function runQueryNotificationsOperation(operation) {
+    const agent = this;
     const id = operation.id;
-    const notifications = await this.api.request({
-        url: `v1/apps/${id}/notifications`
-    });
-
-    log.info(notifications);
 
     this.api.request({
         url: `v1/apps/${id}/notifications`
@@ -109,11 +105,17 @@ agent.prototype.runQueryNotificationsOperation = async function runQueryNotifica
         const isArray = Array.isArray(entries);
         if (isArray) {
             fetchData = operation.sourceQuery(this.db);
-            log.info(fetchData);
-            return fetchData.then(async(result) => {
-                let rows;
-                log.debug(JSON.stringify(result));
-                // rows = result[0];
+            fetchData.then(async(result) => {
+                let action = operation.action(this, response, result, this.db);
+
+                if (!(action instanceof Promise)) {
+                    action = Promise.resolve();
+                }
+
+                return action.then(() => {
+                    log.info(`Action completed.`);
+                });
+
                 return Promise.resolve();
             });
         }
