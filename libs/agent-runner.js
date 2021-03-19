@@ -141,9 +141,9 @@ agent.prototype.runCreateNotificationOperation = async function runCreateNotific
             data: {
                 message: operation.title
             },
-            scope: [{
+            scope: {
                 Email: operation.email
-            }],
+            },
             pushNotification: {
                 payload: payload
             }
