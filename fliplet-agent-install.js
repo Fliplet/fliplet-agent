@@ -10,6 +10,8 @@ switch (os.platform()) {
   case 'darwin':
     packageName = 'node-mac';
     break;
+  case 'linux':
+    packageName = 'node-linux';
   default:
     throw new Error('OS not supported');
 }
