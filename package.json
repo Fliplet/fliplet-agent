@@ -1,6 +1,6 @@
 {
     "name": "fliplet-notification-agent",
-    "version": "1.12.7",
+    "version": "1.12.8",
     "description": "Fliplet Notification Agent (Notification service) is a command line utility for Fliplet App Notifications.",
     "main": "fliplet-agent.js",
     "scripts": {
@@ -30,13 +30,16 @@
         "mime": "^2.5.2",
         "moment": "^2.29.1",
         "mysql2": "^2.2.5",
-        "node-windows": "^1.0.0-beta.5",
         "pg": "^8.5.1",
         "pg-hstore": "^2.3.3",
         "promise-limit": "^2.7.0",
         "sequelize": "^6.5.1",
         "sp-request": "^3.0.0",
         "tedious": "^11.0.6"
+    },
+    "optionalDependencies": {
+        "node-windows": "^1.0.0-beta.5",
+        "node-linux": "0.1.12"
     },
     "bugs": {
         "url": "https://github.com/emmett-miller/fliplet-agent/issues"
