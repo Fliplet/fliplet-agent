@@ -6,7 +6,8 @@ const userAgent = `Fliplet Agent/${version}`;
 
 const regions = {
   eu: 'https://api.fliplet.com',
-  us: 'https://us.api.fliplet.com'
+  us: 'https://us.api.fliplet.com',
+  ca: 'https://ca.api.fliplet.com'
 };
 
 const API = function (authToken, baseURL) {
