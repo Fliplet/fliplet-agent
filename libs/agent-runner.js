@@ -330,7 +330,12 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
                     operation = spr.get(fileUrl, {
                       encoding: null
                     }).then(function (response) {
-                      return { body: response.body, name: 'file.jpg' };
+                      return {
+                        body: response.body,
+                        name: definition.fileType === 'inherit'
+                          ? _.first(path.basename(fileUrl).split('?'))
+                          : 'file.jpg'
+                      };
                     });
                     break;
                 }
