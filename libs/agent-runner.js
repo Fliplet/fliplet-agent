@@ -370,7 +370,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           }
 
           if (!primaryKey) {
-            log.debug(`Row #${id} has been marked for inserting since we don't have a primary key for the comparison.`);
+            log.debug(`A row has been marked for inserting since we don't have a primary key for the comparison. Please use a primary key whenever possible.`);
 
             await syncFiles();
             return commits.push({
