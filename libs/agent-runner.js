@@ -279,7 +279,12 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
       log.debug(`Concurrency has been set to ${concurrency}.`);
 
-      await Promise.all(rows.map((row) => {
+      await Promise.all(rows.map((row, index) => {
+        if (!row) {
+          log.warn(`Skipping null row at index ${index}: ${row}`);
+          return;
+        }
+
         return limit(async function () {
           async function syncFiles(entryId) {
             if (Array.isArray(operation.files) && operation.files.length) {

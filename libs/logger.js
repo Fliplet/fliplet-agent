@@ -36,7 +36,19 @@ logger.error = function (message) {
     return eventLogger.error(message);
   }
 
-  console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
+  console.error(chalk.red(`[${getDate()}]`), chalk.bgRed('[ERROR]'), chalk.red(message));
+}
+
+logger.warn = function (message) {
+  message = message.toString();
+
+  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+
+  if (isService) {
+    return eventLogger.error(message);
+  }
+
+  console.error(chalk.yellow(`[${getDate()}]`), chalk.red('[WARN]'), chalk.yellow(message));
 }
 
 logger.critical = function (message) {
