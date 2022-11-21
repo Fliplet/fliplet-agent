@@ -349,7 +349,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
                   log.error(`[FILES] Cannot fetch file: ${fileUrl}`);
                 }).then(function uploadFile(file) {
                   if (!file) {
-                    row[definition.column] = '';
+                    delete row[definition.column];
                     return;
                   }
 
