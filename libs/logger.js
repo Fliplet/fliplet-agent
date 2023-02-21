@@ -5,7 +5,8 @@ const util = require('util');
 const Sentry = require('@sentry/node');
 const path = require('path');
 const homeDirectory = require('os').homedir();
-const logFile = fs.createWriteStream(path.join(homeDirectory, 'fliplet-agent.log'), { flags : 'w' });
+const logFilePath = path.join(homeDirectory, 'fliplet-agent.log');
+const logFile = fs.createWriteStream(logFilePath, { flags : 'a' });
 
 const isService = process.env.SERVICE;
 const logger = {};
@@ -94,5 +95,7 @@ logger.debug = function (message) {
 
   console.error(chalk.green(`[${getDate()}]`), chalk.gray(message));
 }
+
+logger.info(`[LOG] A log file for all produced output can be found at ${logFilePath}`);
 
 global.log = logger;
