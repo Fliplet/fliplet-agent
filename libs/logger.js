@@ -13,6 +13,8 @@ const logger = {};
 let eventLogger;
 let loggerVerbosity = 'debug';
 
+const fileName = path.basename(process.env.CFGPATH || process.argv[2] || 'File').split('.')[0];
+
 function getDate() {
   return moment().format('YYYY-MM-DD HH:mm:ss');
 }
@@ -20,7 +22,7 @@ function getDate() {
 // Windows Service Logger to Event Viewer
 if (isService) {
   const EventLogger = require('node-windows').EventLogger;
-  eventLogger = new EventLogger('Fliplet Agent');
+  eventLogger = new EventLogger(`Fliplet Agent (${fileName})`);
 }
 
 logger.setVerbosity = function setVerbosity (verbosity) {
@@ -31,36 +33,36 @@ logger.setVerbosity = function setVerbosity (verbosity) {
 logger.error = function (message) {
   message = message.toString();
 
-  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+  logFile.write(`[${fileName}] [${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.error(message);
   }
 
-  console.error(chalk.red(`[${getDate()}]`), chalk.bgRed('[ERROR]'), chalk.red(message));
+  console.error(`[${fileName}]`, chalk.red(`[${getDate()}]`), chalk.bgRed('[ERROR]'), chalk.red(message));
 }
 
 logger.warn = function (message) {
   message = message.toString();
 
-  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+  logFile.write(`[${fileName}] [${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.error(message);
   }
 
-  console.error(chalk.yellow(`[${getDate()}]`), chalk.red('[WARN]'), chalk.yellow(message));
+  console.error(`[${fileName}]`, chalk.yellow(`[${getDate()}]`), chalk.red('[WARN]'), chalk.yellow(message));
 }
 
 logger.critical = function (message) {
   message = message.toString();
-  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+  logFile.write(`[${fileName}] [${getDate()}] ${util.format(message)}\r\n`);
   Sentry.captureException(message);
 
   if (isService) {
     eventLogger.error(message);
   } else {
-    console.error(chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
+    console.error(`[${fileName}]`, chalk.red(`[${getDate()}]`), chalk.yellow('[ERROR]'), chalk.red(message));
   }
 
   throw new Error(`A critical error was triggered. Aborting process: ${message}`);
@@ -72,13 +74,13 @@ logger.info = function (message) {
   }
 
   message = message.toString();
-  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+  logFile.write(`[${fileName}] [${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.info(message);
   }
 
-  console.error(chalk.green(`[${getDate()}]`), message);
+  console.info(`[${fileName}]`, chalk.green(`[${getDate()}]`), message);
 }
 
 logger.debug = function (message) {
@@ -87,13 +89,13 @@ logger.debug = function (message) {
   }
 
   message = message.toString();
-  logFile.write(`[${getDate()}] ${util.format(message)}\r\n`);
+  logFile.write(`[${fileName}] [${getDate()}] ${util.format(message)}\r\n`);
 
   if (isService) {
     return eventLogger.info(message);
   }
 
-  console.error(chalk.green(`[${getDate()}]`), chalk.gray(message));
+  console.info(`[${fileName}]`, chalk.green(`[${getDate()}]`), chalk.gray(message));
 }
 
 logger.info(`[LOG] A log file for all produced output can be found at ${logFilePath}`);

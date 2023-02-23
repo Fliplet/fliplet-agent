@@ -20,7 +20,6 @@ const Crypt = require('./crypt');
 const series = promiseLimit(1);
 
 const agent = function initAgent(config) {
-  log.info('Initialising connection with source database...');
 
   this.operations = [];
 
@@ -30,6 +29,8 @@ const agent = function initAgent(config) {
   }, config);
 
   if (typeof this.config.database === 'object' && Object.keys(this.config.database).length) {
+    log.info('[DB] Initialising connection with source database...');
+
     // Extend db settings
     this.config.database = _.extend({
       operatorsAliases: false,
@@ -51,11 +52,11 @@ const agent = function initAgent(config) {
 
   return authenticate
     .catch(err => {
-      log.critical(`Unable to connect to the database: ${err.message}`);
+      log.critical(`[DB] Unable to connect to the source database: ${err.message}`);
     })
     .then(() => {
-      log.info('Connection has been established successfully.');
-      log.info('Authenticating with Fliplet API...');
+      log.info('[DB] Connection has been established successfully.');
+      log.info('[API] Authenticating with Fliplet API...');
 
       return this.api.authenticate();
     })
