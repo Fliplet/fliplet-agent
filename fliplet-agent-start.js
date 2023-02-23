@@ -1,3 +1,7 @@
+// Allow self-signed certificates when running as a service
+process.env.NODE_NO_WARNINGS = 1;
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const { Agent, config } = require('./libs/agent-bootstrap');
 
 try {
