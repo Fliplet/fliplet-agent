@@ -362,7 +362,8 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
                     url: fileUrl,
                     operation,
                     row,
-                    file
+                    file,
+                    definition
                   }).then(function (file) {
                     row[definition.column] = file.url;
                     row[`${definition.column}MediaFileId`] = file.id;

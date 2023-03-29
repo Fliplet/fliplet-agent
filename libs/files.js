@@ -68,19 +68,31 @@ module.exports = function (API) {
 
   /**
    * Upload a file to Fliplet API
-   * @param options { Object } - row, operation, url, content
+   * @param options { Object } - row, operation, url, content, definition
    */
   async function upload(options) {
     const folder = await getUploadFolder();
     const checksum = generateChecksum(options.file.body);
     const fileName = options.file.name;
 
-    const existingFile = _.find(folder.files, (file) => {
-      return file.metadata && file.metadata.checksum === checksum;
-    });
+    let existingFile;
+
+    // Check by checksum
+    if (!definition.compare || definition.compare.indexOf('checksum') !== -1) {
+      existingFile = _.find(folder.files, (file) => {
+        return file.metadata && file.metadata.checksum === checksum;
+      });
+    }
+
+    // Check by name
+    if ((!definition.compare || definition.compare.indexOf('name') !== -1) && !existingFile && fileName) {
+      existingFile = _.find(folder.files, (file) => {
+        return file.name === fileName;
+      });
+    }
 
     if (existingFile) {
-      log.debug(`[FILES] File already exists on Fliplet servers: ${fileName}`);
+      log.debug(`[FILES] File "${fileName}" does not need to be sync as it was uploaded on ${existingFile.createdAt}.`);
       return Promise.resolve(existingFile);
     }
 
