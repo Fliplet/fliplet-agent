@@ -76,19 +76,20 @@ module.exports = function (API) {
     const fileName = options.file.name;
 
     const existingFile = _.find(folder.files, (file) => {
-      return file.metadata && file.metadata.checksum === checksum;
+      return file.metadata && (file.metadata.checksum === checksum || file.metadata.clientChecksum === checksum);
     });
 
     if (existingFile) {
-      log.debug(`[FILES] File already exists on Fliplet servers: ${fileName}`);
+      log.debug(`[FILES] File ${fileName} with checksum ${checksum} does not need an update.`);
       return Promise.resolve(existingFile);
     }
 
     const formData = new FormData();
 
     formData.append('files', options.file.body, options.file.name);
+    formData.append('checksum', checksum);
 
-    log.info(`[FILES] Uploading ${fileName}`);
+    log.info(`[FILES] Uploading ${fileName} with checksum ${checksum}.`);
 
     return API.request({
       url: `v1/media/files?folderId=${folder.id}&name=${encodeURIComponent(fileName)}&organizationId=${folder.organizationId}`,
