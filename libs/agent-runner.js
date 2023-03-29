@@ -6,6 +6,7 @@ const util = require('util');
 const axios = require('axios');
 const Sequelize = require('sequelize');
 const promiseLimit = require('promise-limit');
+const package = require(path.join(__dirname, '../', 'package.json'));
 const moment = require('moment');
 const mime = require('mime');
 const Sentry = require('@sentry/node');
@@ -56,6 +57,17 @@ const agent = function initAgent(config) {
     })
     .then(() => {
       log.info('[DB] Connection has been established successfully.');
+      log.info('[VERSION] Checking the Fliplet Agent version with the npm registry...');
+
+      // Check whether we're on the latest version
+      return axios.get('https://registry.npmjs.org/-/package/fliplet-agent/dist-tags').then(function (response) {
+        if (response.data && response.data.latest && response.latest !== package.version) {
+          log.warn(`[VERSION] Your current version of the Fliplet Agent is ${package.version}, while the latest version available is ${response.data.latest}. We recommend that you upgrade to the latest version by executing the following command: "npm update fliplet-agent -g".`);
+        }
+      }).catch(function () {
+        // nothing
+      });
+    }).then(() => {
       log.info('[API] Authenticating with Fliplet API...');
 
       return this.api.authenticate();
