@@ -558,11 +558,11 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
             log.critical(`The sync operation has failed ${MAX_RETRIES} times. Please check your internet connection and try again later.`);
           }
 
-          log.info(`Retrying in 5 minutes (retry ${retry} of ${MAX_RETRIES})...`);
+          log.info(`Retrying in 1 minute (retry ${retry} of ${MAX_RETRIES})...`);
 
           pendingCommit = setTimeout(() => {
             scheduleSync();
-          }, 1000 * 1 * 5);
+          }, 1000 * 60 * 1);
         });
       }
 
