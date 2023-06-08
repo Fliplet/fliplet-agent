@@ -19,6 +19,9 @@ const Files = require('./files');
 const Crypt = require('./crypt');
 
 const series = promiseLimit(1);
+let pendingCommit;
+
+const MAX_RETRIES = 5;
 
 const agent = function initAgent(config) {
 
@@ -61,7 +64,7 @@ const agent = function initAgent(config) {
 
       // Check whether we're on the latest version
       return axios.get('https://registry.npmjs.org/-/package/fliplet-agent/dist-tags').then(function (response) {
-        if (response.data && response.data.latest && response.latest !== package.version) {
+        if (response.data && response.data.latest && response.data.latest !== package.version) {
           log.warn(`[VERSION] Your current version of the Fliplet Agent is ${package.version}, while the latest version available is ${response.data.latest}. We recommend that you upgrade to the latest version by executing the following command: "npm update fliplet-agent -g".`);
         }
       }).catch(function () {
@@ -112,6 +115,11 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
     log.info('[✓] The primary key has been set to be case-insensitive.');
   } else {
     log.info('[!] The primary key has been set to be case-sensitive.');
+  }
+
+  if (pendingCommit) {
+    clearTimeout(pendingCommit);
+    pendingCommit = null;
   }
 
   // Cleanup
@@ -520,27 +528,45 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
         log.info('[ENCRYPTION] All data have been encrypted.');
       }
 
-      return this.api.request({
-        method: 'POST',
-        url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
-        data: {
-          append: true,
-          entries: commits,
-          delete: toDelete && toDelete.length ? toDelete : undefined,
-          runHooks: operation.runHooks || [],
-          extend: operation.merge
-        }
-      }).then((res) => {
-        log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+      let retry = 0;
 
-        if (typeof operation.onSync === 'function') {
-          operation.onSync({
-            commits
-          });
-        }
-      }).catch((err) => {
-        log.critical(`Cannot sync data to Fliplet servers: ${err.message}`);
-      });
+      function scheduleSync() {
+        return agent.api.request({
+          method: 'POST',
+          url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
+          data: {
+            append: true,
+            entries: commits,
+            delete: toDelete && toDelete.length ? toDelete : undefined,
+            runHooks: operation.runHooks || [],
+            extend: operation.merge
+          }
+        }).then((res) => {
+          log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+
+          if (typeof operation.onSync === 'function') {
+            operation.onSync({
+              commits
+            });
+          }
+        }).catch((err) => {
+          retry++;
+
+          log.error(`Cannot sync data to Fliplet servers. The error message returned is "${err.message}". Records to sync: ${commits.length}. Data Source ID: ${operation.targetDataSourceId}. Size of the payload: ${JSON.stringify(commits).length} characters. Operation merge type: ${operation.merge}.`);
+
+          if (retry >= MAX_RETRIES) {
+            log.critical(`The sync operation has failed ${MAX_RETRIES} times. Please check your internet connection and try again later.`);
+          }
+
+          log.info(`Retrying in 5 minutes (retry ${retry} of ${MAX_RETRIES})...`);
+
+          pendingCommit = setTimeout(() => {
+            scheduleSync();
+          }, 1000 * 1 * 5);
+        });
+      }
+
+      return scheduleSync();
     }).catch((err) => {
       log.critical(err);
     });
