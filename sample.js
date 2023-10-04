@@ -20,7 +20,7 @@ module.exports.config = {
   // Define the batch size in which records will be processed. If value not provided default will be 1000
   // If mode is set to replace, records will be processed in batch
   // else all the records processed at once
-  batchSize: 500,
+  batchSize: 1000,
 
   // Database connection settings (using Sequelize format)
   // http://docs.sequelizejs.com/
