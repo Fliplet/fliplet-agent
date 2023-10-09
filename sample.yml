@@ -72,6 +72,11 @@ timestamp_column: updatedAt
 # Using "update" will keep orphaned entries while "replace" will delete them.
 mode: update
 
+# Define the batch size in which records will be processed. If value not provided default will be 1000
+# If mode is set to replace, records will be processed in batch
+# else all the records processed at once
+batch_size: 1000
+
 # Define which (optional) column should be used to compare whether
 # the record has been flagged as deleted on your database and should
 # be removed from the Fliplet Data Source when the column value is not null.

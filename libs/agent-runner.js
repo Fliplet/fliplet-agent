@@ -23,6 +23,8 @@ let pendingCommit;
 
 const MAX_RETRIES = 5;
 
+const BATCH_SIZE = 1000;
+
 const agent = function initAgent(config) {
 
   this.operations = [];
@@ -53,7 +55,6 @@ const agent = function initAgent(config) {
   this.files = new Files(this.api);
 
   const authenticate = this.db ? this.db.authenticate() : Promise.resolve();
-
   return authenticate
     .catch(err => {
       log.critical(`[DB] Unable to connect to the source database: ${err.message}`);
@@ -154,7 +155,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       }).then(async (response) => {
         let dataSource;
 
-        if (!response.data.dataSources.length) {
+        if (!response.data.dataSources.length) {
           log.debug('[ENCRYPTION] Generating new keystore...');
 
           const organizations = await this.api.request({
@@ -282,9 +283,6 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
         }
       }
 
-      const commits = [];
-      let toDelete = [];
-
       if (operation.deleteColumnName) {
         log.debug(`Delete mode is enabled for rows having "${operation.deleteColumnName}" not null.`);
       }
@@ -297,276 +295,295 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
 
       const concurrency = parseInt(operation.concurrency || 1, 10);
       const limit = promiseLimit(concurrency);
+      const localDataMap = new Map();
+      let toDelete = [];
+
+      // Create map of local data to optimize matching logic between local and server's data
+      for (const localData of rows) {
+        const key = operation.caseInsensitivePrimaryColumn
+          ? (typeof localData[primaryKey] === 'string' ? localData[primaryKey].toLowerCase() : localData[primaryKey])
+          : id;
+        localDataMap.set(key, localData);
+      }
+
+      // Check for the rows which are deleted from local database.
+      // Add deleted rows in toDelete array to remove it from server's dataSource
+      for (const dsEntry of entries) {
+        const key = operation.caseInsensitivePrimaryColumn
+          ? (typeof dsEntry.data[primaryKey] === 'string' ? dsEntry.data[primaryKey].toLowerCase() : dsEntry.data[primaryKey])
+          : id;
+
+        if (!localDataMap.get(key)) {
+          log.debug(`Remote entry with ID ${dsEntry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
+          toDelete.push(dsEntry.id);
+        }
+      }
 
       log.debug(`Concurrency has been set to ${concurrency}.`);
+      const batchSize = operation.mode === 'update' ? rows.length : (this.config.batchSize || BATCH_SIZE);
+      for (let record = 0; record < rows.length; record += batchSize) {
+        // Initialize commits array for each batch
+        const commits = [];
+        const batchRows = rows.slice(record, record + batchSize);
+        log.debug(`Processing records from ${record} to ${record + batchSize}`);
 
-      await Promise.all(rows.map((row, index) => {
-        if (!row) {
-          log.warn(`Skipping null row at index ${index}: ${row}`);
-          return;
-        }
+        await Promise.all(batchRows.map((row, index) => {
+          if (!row) {
+            log.warn(`Skipping null row at index ${index}: ${row}`);
+            return;
+          }
 
-        return limit(async function () {
-          async function syncFiles(entryId) {
-            if (Array.isArray(operation.files) && operation.files.length) {
-              await Promise.all(operation.files.map(function (definition) {
-                let fileUrl = row[definition.column];
+          return limit(async function () {
+            async function syncFiles(entryId) {
+              if (Array.isArray(operation.files) && operation.files.length) {
+                await Promise.all(operation.files.map(function (definition) {
+                  let fileUrl = row[definition.column];
 
-                if (!fileUrl) {
-                  return;
-                }
-
-                let operation;
-
-                switch (definition.type) {
-                  case 'remote':
-                    log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
-                    operation = axios.request({
-                      url: fileUrl,
-                      responseType: 'arraybuffer',
-                      headers: definition.headers
-                    }).then((response) => {
-                      const parsedUrl = url.parse(fileUrl);
-                      const contentType = response.headers['content-type'];
-                      const extension = mime.getExtension(contentType);
-
-                      return {
-                        body: response.data,
-                        name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
-                      };
-                    });
-                    break;
-                  case 'local':
-                    if (definition.directory) {
-                      fileUrl = path.join(definition.directory, fileUrl);
-                    }
-
-                    log.debug(`[FILES] Requesting local file: ${fileUrl}`);
-                    operation = readFile(fileUrl).then((response) => {
-                      return {
-                        body: response,
-                        name: path.basename(fileUrl)
-                      };
-                    });
-                    break;
-                  case 'sharepoint':
-                    const credentialOptions = { username: definition.username, password: definition.password };
-                    const spr = sprequest.create(credentialOptions);
-
-                    operation = spr.get(fileUrl, {
-                      encoding: null
-                    }).then(function (response) {
-                      return {
-                        body: response.body,
-                        name: definition.fileType === 'inherit'
-                          ? _.first(path.basename(fileUrl).split('?'))
-                          : 'file.jpg'
-                      };
-                    });
-                    break;
-                }
-
-                return operation.catch((err) => {
-                  log.error(`[FILES] Cannot fetch file: ${fileUrl} - Error: ${err}`);
-                }).then(function uploadFile(file) {
-                  if (!file) {
-                    delete row[definition.column];
+                  if (!fileUrl) {
                     return;
                   }
 
-                  if (entryId) {
-                    file.name = `${entryId}-${file.name}`;
+                  let operation;
+
+                  switch (definition.type) {
+                    case 'remote':
+                      log.debug(`[FILES] Requesting remote file: ${fileUrl}`);
+                      operation = axios.request({
+                        url: fileUrl,
+                        responseType: 'arraybuffer',
+                        headers: definition.headers
+                      }).then((response) => {
+                        const parsedUrl = url.parse(fileUrl);
+                        const contentType = response.headers['content-type'];
+                        const extension = mime.getExtension(contentType);
+
+                        return {
+                          body: response.data,
+                          name: `${path.basename(parsedUrl.pathname)}${extension ? `.${extension}` : ''}`
+                        };
+                      });
+                      break;
+                    case 'local':
+                      if (definition.directory) {
+                        fileUrl = path.join(definition.directory, fileUrl);
+                      }
+
+                      log.debug(`[FILES] Requesting local file: ${fileUrl}`);
+                      operation = readFile(fileUrl).then((response) => {
+                        return {
+                          body: response,
+                          name: path.basename(fileUrl)
+                        };
+                      });
+                      break;
+                    case 'sharepoint':
+                      const credentialOptions = { username: definition.username, password: definition.password };
+                      const spr = sprequest.create(credentialOptions);
+
+                      operation = spr.get(fileUrl, {
+                        encoding: null
+                      }).then(function (response) {
+                        return {
+                          body: response.body,
+                          name: definition.fileType === 'inherit'
+                            ? _.first(path.basename(fileUrl).split('?'))
+                            : 'file.jpg'
+                        };
+                      });
+                      break;
                   }
 
-                  return agent.files.upload({
-                    url: fileUrl,
-                    operation,
-                    row,
-                    file
-                  }).then(function (file) {
-                    row[definition.column] = file.url;
-                    row[`${definition.column}MediaFileId`] = file.id;
+                  return operation.catch((err) => {
+                    log.error(`[FILES] Cannot fetch file: ${fileUrl} - Error: ${err}`);
+                  }).then(function uploadFile(file) {
+                    if (!file) {
+                      delete row[definition.column];
+                      return;
+                    }
+
+                    if (entryId) {
+                      file.name = `${entryId}-${file.name}`;
+                    }
+
+                    return agent.files.upload({
+                      url: fileUrl,
+                      operation,
+                      row,
+                      file
+                    }).then(function (file) {
+                      row[definition.column] = file.url;
+                      row[`${definition.column}MediaFileId`] = file.id;
+                    });
+                  }).catch(function onFileUploadError(err) {
+                    log.error(`Cannot upload file: ${err}`);
+                    return Promise.resolve();
                   });
-                }).catch(function onFileUploadError(err) {
-                  log.error(`Cannot upload file: ${err}`);
-                  return Promise.resolve();
-                });
-              }));
+                }));
+              }
             }
-          }
 
-          if (!primaryKey) {
-            log.debug(`A row has been marked for inserting since we don't have a primary key for the comparison. Please use a primary key whenever possible.`);
+            if (!primaryKey) {
+              log.debug(`A row has been marked for inserting since we don't have a primary key for the comparison. Please use a primary key whenever possible.`);
 
-            await syncFiles();
-            return commits.push({
-              data: row
+              await syncFiles();
+              return commits.push({
+                data: row
+              });
+            }
+
+            const id = row[primaryKey];
+            const normalizedPrimaryKey = operation.caseInsensitivePrimaryColumn
+              ? (typeof row[primaryKey] === 'string' ? row[primaryKey].toLowerCase() : row[primaryKey])
+              : id;
+
+            const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
+
+            if (!id) {
+              log.error(`A row is missing its primary key value from the database. Skipping: ${JSON.stringify(row)}`);
+              return Promise.resolve();
+            }
+
+            if (ids.indexOf(normalizedPrimaryKey) !== -1) {
+              log.error(`A duplicate row has been found for the same primary key. Skipping: ${JSON.stringify(row)}`);
+              return Promise.resolve();
+            }
+
+            ids.push(normalizedPrimaryKey);
+
+            const entry = _.find(entries, (e) => {
+              if (operation.caseInsensitivePrimaryColumn) {
+                const remoteKey = typeof e.data[primaryKey] === 'string' ? e.data[primaryKey].toLowerCase() : e.data[primaryKey];
+
+                return normalizedPrimaryKey === remoteKey;
+              }
+
+              return e.data[primaryKey] === id;
             });
-          }
 
-          const id = row[primaryKey];
-          const normalizedPrimaryKey = operation.caseInsensitivePrimaryColumn
-            ? (typeof row[primaryKey] === 'string' ? row[primaryKey].toLowerCase() : row[primaryKey])
-            : id;
+            if (!entry) {
+              if (isDeleted) {
+                log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
+                return;
+              }
 
-          const isDeleted = operation.deleteColumnName && row[operation.deleteColumnName];
+              log.debug(`Row #${id} has been marked for inserting.`);
 
-          if (!id) {
-            log.error(`A row is missing its primary key value from the database. Skipping: ${JSON.stringify(row)}`);
-            return Promise.resolve();
-          }
-
-          if (ids.indexOf(normalizedPrimaryKey) !== -1) {
-            log.error(`A duplicate row has been found for the same primary key. Skipping: ${JSON.stringify(row)}`);
-            return Promise.resolve();
-          }
-
-          ids.push(normalizedPrimaryKey);
-
-          const entry = _.find(entries, (e) => {
-            if (operation.caseInsensitivePrimaryColumn) {
-              const remoteKey = typeof e.data[primaryKey] === 'string' ? e.data[primaryKey].toLowerCase() : e.data[primaryKey];
-
-              return normalizedPrimaryKey === remoteKey;
+              await syncFiles(id);
+              return commits.push({
+                data: row
+              });
             }
 
-            return e.data[primaryKey] === id;
-          });
+            if (!timestampKey) {
+              log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id}.`);
+            }
 
-          if (!entry) {
             if (isDeleted) {
-              log.debug(`Row #${id} is not present on Fliplet servers and it's locally marked as deleted. Skipping...`);
-              return;
+              log.debug(`Row #${id} has been marked for deletion on Fliplet servers with ID ${entry.id}.`);
+              return toDelete.push(entry.id);
             }
 
-            log.debug(`Row #${id} has been marked for inserting.`);
+            const sourceTimestamp = row[timestampKey];
+            const targetTimestamp = entry.data[timestampKey];
+
+            const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
+
+            if (!diff && operation.mode !== 'replace') {
+              return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
+            }
+
+            log.debug(`Row #${id} has been marked for updating.`);
 
             await syncFiles(id);
             return commits.push({
+              id: entry.id,
               data: row
             });
-          }
-
-          if (!timestampKey) {
-            log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id}.`);
-          }
-
-          if (isDeleted) {
-            log.debug(`Row #${id} has been marked for deletion on Fliplet servers with ID ${entry.id}.`);
-            return toDelete.push(entry.id);
-          }
-
-          const sourceTimestamp = row[timestampKey];
-          const targetTimestamp = entry.data[timestampKey];
-
-          const diff = moment(sourceTimestamp).diff(moment(targetTimestamp), 'seconds');
-
-          if (!diff && operation.mode !== 'replace') {
-            return log.debug(`Row #${id} already exists on Fliplet servers with ID ${entry.id} and does not require updating.`);
-          }
-
-          log.debug(`Row #${id} has been marked for updating.`);
-          entry.found = true;
-
-          await syncFiles(id);
-          return commits.push({
-            id: entry.id,
-            data: row
           });
-        });
-      }));
+        }));
 
+        toDelete = _.compact(_.uniq(toDelete));
 
-      if (operation.mode === 'replace' && entries.length) {
-        entries.forEach((entry) => {
-          if (!entry.found) {
-            log.debug(`Remote entry with ID ${entry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
-            toDelete.push(entry.id);
-          }
-        });
-      }
-
-      toDelete = _.compact(_.uniq(toDelete));
-
-      if (!commits.length && !toDelete.length) {
-        log.info('Nothing to commit.');
-
-        if (typeof operation.onSync === 'function') {
-          operation.onSync({
-            commits: []
-          });
-        }
-
-        return Promise.resolve();
-      }
-
-      if (this.config.isDryRun) {
-        log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
-        log.info(JSON.stringify(commits, null, 2));
-
-        if (toDelete.length) {
-          log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
-        }
-
-        log.info('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
-        return;
-      }
-
-      if (encryptionKey && commits.length) {
-        log.info('[ENCRYPTION] Encrypting data before it\'s committed...');
-
-        commits.forEach((entry) => {
-          operation.encrypt.fields.forEach((field) => {
-            if (!_.get(entry.data, field)) {
-              return;
-            }
-
-            entry.data[field] = Crypt.salt(encryptionKey).encrypt(entry.data[field]);
-          });
-        });
-
-        log.info('[ENCRYPTION] All data have been encrypted.');
-      }
-
-      let retry = 0;
-
-      function scheduleSync() {
-        return agent.api.request({
-          method: 'POST',
-          url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
-          data: {
-            append: true,
-            entries: commits,
-            delete: toDelete && toDelete.length ? toDelete : undefined,
-            runHooks: operation.runHooks || [],
-            extend: operation.merge
-          }
-        }).then((res) => {
-          log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+        if (!commits.length && !toDelete.length) {
+          log.info('Nothing to commit.');
 
           if (typeof operation.onSync === 'function') {
             operation.onSync({
-              commits
+              commits: []
             });
           }
-        }).catch((err) => {
-          retry++;
 
-          log.error(`Cannot sync data to Fliplet servers. The error message returned is "${err.message}". Records to sync: ${commits.length}. Data Source ID: ${operation.targetDataSourceId}. Size of the payload: ${JSON.stringify(commits).length} characters. Operation merge type: ${operation.merge}.`);
+          return Promise.resolve();
+        }
 
-          if (retry >= MAX_RETRIES) {
-            log.critical(`The sync operation has failed ${MAX_RETRIES} times. Please check your internet connection and try again later.`);
+        if (this.config.isDryRun) {
+          log.info('Dry run mode is enabled. Here\'s a dump of the commit log we would have been sent to the Fliplet API:');
+          log.info(JSON.stringify(commits, null, 2));
+
+          if (toDelete.length) {
+            log.info('Entries to delete: ' + JSON.stringify(toDelete, null, 2));
           }
 
-          log.info(`Retrying in 1 minute (retry ${retry} of ${MAX_RETRIES})...`);
+          log.info('[!] If you don\'t know what the above means, please get in touch with us! We\'re here to help.');
+          return;
+        }
 
-          pendingCommit = setTimeout(() => {
-            scheduleSync();
-          }, 1000 * 60 * 1);
-        });
+        if (encryptionKey && commits.length) {
+          log.info('[ENCRYPTION] Encrypting data before it\'s committed...');
+
+          commits.forEach((entry) => {
+            operation.encrypt.fields.forEach((field) => {
+              if (!_.get(entry.data, field)) {
+                return;
+              }
+
+              entry.data[field] = Crypt.salt(encryptionKey).encrypt(entry.data[field]);
+            });
+          });
+
+          log.info('[ENCRYPTION] All data have been encrypted.');
+        }
+
+        let retry = 0;
+
+        async function scheduleSync() {
+          return agent.api.request({
+            method: 'POST',
+            url: `v1/data-sources/${operation.targetDataSourceId}/commit`,
+            data: {
+              append: true,
+              entries: commits,
+              delete: toDelete && toDelete.length ? toDelete : undefined,
+              runHooks: operation.runHooks || [],
+              extend: operation.merge
+            }
+          }).then((res) => {
+            log.info(`Sync finished. ${res.data.entries.length} data source entries have been affected.`);
+
+            if (typeof operation.onSync === 'function') {
+              operation.onSync({
+                commits
+              });
+            }
+          }).catch((err) => {
+            retry++;
+
+            log.error(`Cannot sync data to Fliplet servers. The error message returned is "${err.message}". Records to sync: ${commits.length}. Data Source ID: ${operation.targetDataSourceId}. Size of the payload: ${JSON.stringify(commits).length} characters. Operation merge type: ${operation.merge}.`);
+
+            if (retry >= MAX_RETRIES) {
+              log.critical(`The sync operation has failed ${MAX_RETRIES} times. Please check your internet connection and try again later.`);
+            }
+
+            log.info(`Retrying in 1 minute (retry ${retry} of ${MAX_RETRIES})...`);
+
+            pendingCommit = setTimeout(() => {
+              scheduleSync();
+            }, 1000 * 60 * 1);
+          });
+        }
+
+        await scheduleSync();
       }
-
-      return scheduleSync();
     }).catch((err) => {
       log.critical(err);
     });
@@ -621,12 +638,12 @@ agent.prototype.runPullOperation = function runPullOperation(operation) {
 agent.prototype.run = function runOperations() {
   const initRun = this.config.syncOnInit
     ? Promise.all(this.operations.map((operation) => {
-        return series(() => this.runOperation(operation))
-      })).then(() => {
-        if (this.operations.length > 1) {
-          log.info('Finished to run all operations.');
-        }
-      })
+      return series(() => this.runOperation(operation))
+    })).then(() => {
+      if (this.operations.length > 1) {
+        log.info('Finished to run all operations.');
+      }
+    })
     : Promise.resolve();
 
   initRun.then(() => {

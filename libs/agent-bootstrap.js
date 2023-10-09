@@ -65,6 +65,7 @@ try {
         authToken: doc.auth_token,
         syncOnInit: doc.sync_on_init,
         logVerbosity: doc.log_verbosity,
+        batchSize: doc.batch_size,
         database: {
           dialect: doc.database_driver,
           dialectModulePath: doc.database_native_odbc ? 'sequelize-odbc-mssql' : undefined,
