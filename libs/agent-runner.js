@@ -22,7 +22,6 @@ const series = promiseLimit(1);
 let pendingCommit;
 
 const MAX_RETRIES = 5;
-
 const BATCH_SIZE = 1000;
 
 const agent = function initAgent(config) {
