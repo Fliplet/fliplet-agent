@@ -22,7 +22,6 @@ const series = promiseLimit(1);
 let pendingCommit;
 
 const MAX_RETRIES = 5;
-
 const BATCH_SIZE = 1000;
 
 const agent = function initAgent(config) {
@@ -302,7 +301,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       for (const localData of rows) {
         const key = operation.caseInsensitivePrimaryColumn
           ? (typeof localData[primaryKey] === 'string' ? localData[primaryKey].toLowerCase() : localData[primaryKey])
-          : id;
+          : localData[primaryKey];
         localDataMap.set(key, localData);
       }
 
@@ -311,7 +310,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
       for (const dsEntry of entries) {
         const key = operation.caseInsensitivePrimaryColumn
           ? (typeof dsEntry.data[primaryKey] === 'string' ? dsEntry.data[primaryKey].toLowerCase() : dsEntry.data[primaryKey])
-          : id;
+          : dsEntry.data[primaryKey];
 
         if (!localDataMap.get(key)) {
           log.debug(`Remote entry with ID ${dsEntry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
