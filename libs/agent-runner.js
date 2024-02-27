@@ -312,7 +312,7 @@ agent.prototype.runPushOperation = async function runPushOperation(operation) {
           ? (typeof dsEntry.data[primaryKey] === 'string' ? dsEntry.data[primaryKey].toLowerCase() : dsEntry.data[primaryKey])
           : dsEntry.data[primaryKey];
 
-        if (!localDataMap.get(key) && operation.mode !== 'update') {
+        if (!localDataMap.get(key)) {
           log.debug(`Remote entry with ID ${dsEntry.id} has been marked for deletion as it doesn't exist in the local dataset.`);
           toDelete.push(dsEntry.id);
         }
