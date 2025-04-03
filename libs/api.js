@@ -28,11 +28,29 @@ const API = function (authToken, baseURL) {
   axios.defaults.timeout = 60000;
 };
 
-API.prototype.authenticate = function () {
-  return this.request({
-    url: 'v1/user'
-  });
+API.prototype.authenticate = async function () {
+  try {
+    const response = await this.request({
+      url: 'v1/user'
+    });
+
+    return response;
+  } catch (error) {
+    log.info(`[API] Authentication failed: ${error.message}`);
+    return { isAuthFailed: true };
+  }
 };
+
+API.prototype.logFailedRequest = async function (dataSourceId) {
+  if (!dataSourceId) {
+    return;
+  }
+
+  await this.request({
+    url: `v1/data-sources/${dataSourceId}/data`,
+    method: 'GET'
+  })
+}
 
 API.prototype.request = function (options) {
   return axios(options).catch(function (err) {
