@@ -42,15 +42,19 @@ API.prototype.authenticate = async function () {
 };
 
 API.prototype.logFailedRequest = async function (dataSourceId) {
-  if (!dataSourceId) {
-    return;
-  }
+  try {
+    if (!dataSourceId) {
+      return;
+    }
 
-  await this.request({
-    url: `v1/data-sources/${dataSourceId}/data`,
-    method: 'GET'
-  })
-}
+    await this.request({
+      url: `v1/data-sources/${dataSourceId}/data`,
+      method: "GET"
+    });
+  } catch (error) {
+    log.info(`[API] Failed to log failed request: ${error.message}`);
+  }
+};
 
 API.prototype.request = function (options) {
   return axios(options).catch(function (err) {
