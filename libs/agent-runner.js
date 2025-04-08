@@ -74,25 +74,28 @@ const agent = function initAgent(config) {
       log.info('[API] Authenticating with Fliplet API...');
 
       return this.api.authenticate();
-    })
-    .catch(err => {
-      log.critical(`Unable to authenticate with Fliplet API: ${err.message}`);
-    })
-    .then((response) => {
-      log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
-
-      Sentry.configureScope((scope) => {
-        scope.setUser(_.pick(response.data.user, [
-          'id', 'email', 'auth_token', 'firstName', 'lastName'
-        ]));
-      });
-
+    }).then((response) => {
+      this.isAuthFailed = response && response.isAuthFailed;
+      if(response && !response.isAuthFailed) {
+        log.info(`Authentication has been verified successfully. You're logged in as ${response.data.user.fullName}.`);
+        Sentry.configureScope((scope) => {
+          scope.setUser(_.pick(response.data.user, [
+            'id', 'email', 'auth_token', 'firstName', 'lastName'
+          ]));
+        });
+      }
       return this;
     });
 };
 
-agent.prototype.runOperation = function runOperation(operation) {
+agent.prototype.runOperation = async function runOperation(operation) {
   log.info(`${operation.description}`);
+
+  if (this.isAuthFailed) {
+    await this.api.logFailedRequest(operation.targetDataSourceId);
+    log.critical(`Unable to authenticate with Fliplet API`);
+    return;
+  }
 
   switch (operation.type) {
     case 'push':
